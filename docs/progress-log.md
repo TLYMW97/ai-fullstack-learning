@@ -140,7 +140,7 @@
 - `tsc --noEmit` 0 错误；`prisma generate` 通过（客户端重生成到 `lib/generated/prisma`）。
 
 ## 三、待你确认/待办
-- [ ] 是否现在 `git commit` 第一阶段成果？（注意 `lib/generated/prisma` 已在 `.gitignore`，不会进库；`node_modules` 内的 junction/package.json 临时改动不进库）
+- [x] 第一阶段成果已 `git commit` 到本地 `main`（`a5bd1a3`，32 文件）。未 push（需你确认远端与分支策略）。`lib/generated/prisma` 已 gitignore 不进库；`node_modules` 内 junction/package.json 临时改动不进库。
 - [x] 阶段 1 全功能 CRUD + Markdown 已通过验证（见 P11–P14）
 - [ ] 阶段 2：后台管理 + 登录（极验/邮箱）——需要你提供登录服务的外部密钥/账号，确定后再开工
-- [ ] 前端开发编辑器（VS Code）是否已就绪、远程仓库分支策略是否继续用 main/develop？
+- [ ] 前端开发编辑器（VS Code）是否已就绪、远程仓库分支策略（main/develop）确定后再 push

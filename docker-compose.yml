@@ -1,0 +1,45 @@
+# Docker Compose：用一个文件描述"要启动哪些容器"，一条命令全部拉起。
+# 正常开发时，这个文件就是团队的"本地环境说明书"——新人拿到项目，
+# 装好 Docker 后跑一条 docker compose up -d，数据库环境就和大家完全一致了。
+
+services:
+  postgres:
+    # 官方 PostgreSQL 17 镜像。Docker 会先在本地找，没有才去仓库下载（约 150MB）。
+    image: postgres:17
+
+    # 给容器起固定名字，方便后续 docker logs / docker exec 引用。
+    container_name: ai-blog-postgres
+
+    # 容器意外退出时自动重启；unless-stopped 表示"除非你手动停，否则一直重启"。
+    restart: unless-stopped
+
+    environment:
+      # 首次启动时，镜像会用这三个变量初始化一个数据库和超级用户。
+      # 注意：只有数据卷为空（首次创建）时才会生效，之后改这里不会重建已有数据。
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: blog
+
+    ports:
+      # 宿主机端口:容器内端口。左边 5432 是你在 Windows 上访问的端口，
+      # 右边 5432 是容器里 PostgreSQL 实际监听的端口。
+      # 改成 "5433:5432" 就能避开宿主机端口冲突，而应用代码不用动。
+      - "5432:5432"
+
+    volumes:
+      # 数据持久化：把容器里的数据库文件目录挂到宿主机的一个"命名卷"上。
+      # 没有这行的话，容器一删数据就全没了——这是新手最常踩的坑。
+      - pgdata:/var/lib/postgresql/data
+
+    healthcheck:
+      # 让 Docker 自己判断"数据库是否真的可以连了"，而不是仅仅"进程起来了"。
+      # PostgreSQL 启动到能接受连接需要几秒，没有健康检查就只能靠 sleep 猜。
+      test: ["CMD-SHELL", "pg_isready -U postgres -d blog"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  # 声明上面的命名卷。数据实际存在 Docker 管理的目录里（不在项目目录内），
+  # 所以不会误提交到 git。
+  pgdata:

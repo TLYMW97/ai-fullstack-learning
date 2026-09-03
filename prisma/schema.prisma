@@ -1,0 +1,47 @@
+// Prisma Schema：整个数据库的"唯一真相来源"（single source of truth）。
+//
+// 传统开发流程是：先在数据库里 CREATE TABLE，然后手写 TypeScript 类型去对应表结构，
+// 两边靠人肉保持同步，改了表忘了改类型就出 bug。
+// Prisma 反过来：**你只写这个文件**，然后
+//   1. `prisma migrate dev`  → 自动生成 SQL 并应用到数据库（表结构跟着这个文件走）
+//   2. `prisma generate`     → 自动生成带完整类型的 Client（TS 类型跟着这个文件走）
+// 数据库和代码的类型从此不可能对不上。
+
+// ---------- generator：生成客户端代码 ----------
+// Prisma 7 起默认是 `prisma-client`（ESM、产出可读的 TS 源码），
+// 旧的 `prisma-client-js` 是打进 node_modules 的黑盒 JS，已不推荐。
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+// ---------- datasource：连哪个数据库 ----------
+// 连接串不写死在这里，而是从 .env 的 DATABASE_URL 读（见根目录 prisma7.config.ts）。
+// 好处：本地连 Docker 的库、线上连云数据库，只换环境变量，schema 文件不用动。
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------- model：一张表 ----------
+// 先只做一张 Post 表，把"改 schema → 生成迁移 → 读写数据"这条链路跑通，
+// 后面再加 User / Comment / Tag 都是同一套动作的重复。
+model Post {
+  // @id            = 主键
+  // @default(autoincrement()) = 交给数据库自增，对应 PostgreSQL 的 SERIAL/IDENTITY
+  id Int @id @default(autoincrement())
+
+  // 不带 ? 就是 NOT NULL，必填
+  title String
+
+  // 带 ? 表示可以为 NULL；数据库列也相应可为 NULL
+  content String?
+
+  // @default(false) = 数据库列带 DEFAULT false，插入时不传就是 false
+  published Boolean @default(false)
+
+  // @default(now()) = 插入时自动填当前时间（由数据库层面兜底）
+  createdAt DateTime @default(now())
+
+  // @updatedAt = Prisma 在每次 update 时自动刷新这个字段，不用你手写
+  updatedAt DateTime @updatedAt
+}

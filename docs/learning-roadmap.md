@@ -1,0 +1,169 @@
+# AI 全栈博客 · 学习路线图与任务节点
+
+> 目标：以「可上线的博客系统」为样本，完整走通 **前端 + 后台管理系统 + 后端 + 部署运维**
+> 的全流程，最终可独立交付一个带域名、CDN、对象存储、登录、CI/CD、数据埋点的真实项目。
+> 技术栈：Next.js 16（App Router）+ React 19 + Tailwind 4 + Prisma 7 + PostgreSQL 17（Docker）。
+>
+> 用法：每个节点含【掌握内容 / 关键任务 / 参考资料 / 状态】。状态标记：
+> ⬜ 未开始 · 🟡 进行中 · ✅ 已完成。达成状态与问题记录在 `progress-log.md`。
+
+---
+
+## 阶段 0 · 环境与工程地基 ✅（已基本完成）
+
+**掌握内容**：本地开发环境的全貌；为什么用 Docker 装数据库；Prisma「schema 即真相」的心智模型；包管理与 Node 版本管理。
+
+**关键任务**
+- [x] nvm 切换 Node 22（≥ 20.9）、pnpm 安装
+- [x] `create-next-app` 脚手架（App Router）
+- [x] Docker Desktop + `docker-compose.yml` 起 PostgreSQL 17 容器
+- [x] Prisma 接入：schema → `migrate dev` → `generate`
+- [x] 读链路打通：服务端组件 `await prisma.post.findMany()` 渲染首页
+- [x] TypeScript 类型检查 / `next build` 通过
+
+**参考资料**
+- Next.js 安装：https://nextjs.org/docs/app/getting-started/installation
+- Prisma 快速开始：https://www.prisma.io/docs/getting-started
+- Prisma 7 升级注意（配置改名、driver adapter）：https://pris.ly/d/major-version-upgrade
+
+---
+
+## 阶段 1 · 博客基础功能（CRUD 闭环） ✅
+
+**掌握内容**：App Router 的服务端组件 vs 客户端组件边界；**Server Action**（不写 API 也能改数据）；动态路由 `[id]`；Markdown 渲染；列表/详情/分页。
+
+**关键任务**
+- [x] 用 Server Action 实现「写文章」（补全 CRUD 的 C）— 写库路径已验证（curl 直打会 500，需用浏览器表单或 Route Handler 旁路验证，见 P11）
+- [x] 文章列表页（服务端组件 `findMany` 渲染，带草稿/已发布区分与 `/posts/<id>` 链接）
+- [x] 文章详情页 `app/posts/[id]/page.tsx`（动态路由 `params` 是 Promise + `generateMetadata` 做 SEO）
+- [x] Markdown 正文渲染（`react-markdown` + `@tailwindcss/typography`，已验证 h1/h2/加粗/斜体/列表/代码块/引用）
+- [x] 后端接口层（验证用 Route Handler `app/api/smoke` 跑通「增查改删」闭环，验证后删除）
+
+> 阶段 1 的 `node_modules` 曾因沙箱把 pnpm 软链弄成空壳而大面积损坏，修复过程（junction 全树修复、错名/错版本链、Turbopack 对 `debug` 的 `browser` 字段解析）记录在 `progress-log.md` 的 P12–P14。
+
+**参考资料**
+- Server Actions：https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions
+- 动态路由：https://nextjs.org/docs/app/building-your-application/routing/dynamic-routes
+- Metadata / SEO：https://nextjs.org/docs/app/building-your-application/optimizing/metadata
+
+---
+
+## 阶段 2 · 后台管理系统与登录 🔐
+
+**掌握内容**：会话与鉴权模型（Cookie/Session/JWT）；第三方验证（极验 GeeTest 人机校验）；邮箱验证码登录；受保护路由；管理后台 UI。
+
+**关键任务**
+- [ ] 鉴权方案：Auth.js（NextAuth）或自建 Session（推荐先理解原理，再上库）
+- [ ] 接入**极验 GeeTest**：前端滑块校验 + 后端二次校验
+- [ ] **邮箱验证码登录**：发码（SMTP / 邮件服务）→ 校验 → 签发会话
+- [ ] 受保护的管理后台：`/admin` 下仪表盘、文章管理表格（增删改查）、富文本编辑器
+- [ ] 登录态中间件（`middleware.ts` → Next 16 为 `proxy.ts`）
+
+**参考资料**
+- Auth.js（NextAuth）：https://authjs.dev/getting-started
+- 极验 GeeTest 文档：https://docs.geetest.com/
+- Node 发邮件（nodemailer）：https://nodemailer.com/about/
+
+---
+
+## 阶段 3 · 文件上传与海量存储（腾讯云 COS） 📦
+
+**掌握内容**：对象存储 vs 服务器本地磁盘；**前端直传 COS**（后端只发临时密钥/签名）的安全模型；CDN 加速静态资源；大文件/海量文件策略。
+
+**关键任务**
+- [ ] 腾讯云 COS 开通、Bucket 与权限配置
+- [ ] 后端签发临时密钥（STS）或上传签名
+- [ ] 前端直传 COS + 上传进度/失败重试
+- [ ] 富文本里的图片走 COS + CDN 域名
+- [ ] 缩略图 / 图片处理（COS 数据万象 或 CDN 图像处理）
+
+**参考资料**
+- 腾讯云 COS 文档：https://cloud.tencent.com/document/product/436
+- COS 临时密钥（STS）：https://cloud.tencent.com/document/product/436/14048
+- COS 前端直传：https://cloud.tencent.com/document/product/436/64960
+
+---
+
+## 阶段 4 · 前端体验与工程化 🎨
+
+**掌握内容**：Tailwind 工程化与组件抽象；列表分页/搜索/标签；静态生成（SSG）/增量再生（ISR）取舍；响应式与主题。
+
+**关键任务**
+- [ ] 统一 UI 组件库（Button/Card/Table/Form）
+- [ ] 首页 / 标签页 / 搜索；分页与加载态
+- [ ] 静态化与 ISR：内容站用 SSG 提速、降数据库压力
+- [ ] SEO 收尾：sitemap、RSS、robots、Open Graph
+
+**参考资料**
+- Tailwind CSS：https://tailwindcss.com/docs
+- Next.js 渲染策略：https://nextjs.org/docs/app/building-your-application/rendering
+
+---
+
+## 阶段 5 · 部署与服务器运维 🚀
+
+**掌握内容**：一台真实服务器上的完整部署；域名解析；HTTPS；反向代理；环境变量与密钥管理；数据库备份。
+
+**关键任务**
+- [ ] 云服务器（阿里云 ECS / 轻量应用服务器）+ 域名解析（A/AAAA/CNAME）
+- [ ] 反向代理（Nginx 或 Caddy）+ HTTPS（Let's Encrypt 免费证书）
+- [ ] 生产环境变量（`.env` 不入库，服务器注入）
+- [ ] 数据库迁移与备份策略（`pg_dump` / 定时备份）
+- [ ] 进程守护（systemd / pm2）
+
+**参考资料**
+- Next.js 部署：https://nextjs.org/docs/app/building-your-application/deploying
+- Caddy 自动 HTTPS：https://caddyserver.com/docs/
+- 阿里云 ECS：https://help.aliyun.com/product/25365.html
+
+---
+
+## 阶段 6 · CI/CD 自动化（阿里云效 + GitHub + 飞书） ⚙️
+
+**掌握内容**：流水线概念；GitHub webhook / 推送触发；构建→部署自动化；部署结果通知（飞书机器人）。
+
+**关键任务**
+- [ ] 阿里云效「流水线」新建，源码连接 GitHub 仓库
+- [ ] `push` 到 `main` / `develop` 触发：安装依赖 → 类型检查 → 构建 → 部署
+- [ ] 飞书自定义机器人：部署开始/成功/失败 Webhook 通知
+- [ ] 环境分离：预览环境（develop）与生产环境（main）
+
+**参考资料**
+- 阿里云效流水线：https://help.aliyun.com/product/150040.html
+- 飞书自定义机器人（Webhook）：https://open.feishu.cn/document/ukTMukTMukTM/ucTM5YjL4EjNz4
+
+---
+
+## 阶段 7 · 数据埋点与增长（百度统计） 📊
+
+**掌握内容**：PV/UV 等指标含义；前端埋点接入；自定义事件；看板解读。
+
+**关键任务**
+- [ ] 接入百度统计：在 `layout.tsx` 注入统计脚本
+- [ ] 关键事件埋点（文章阅读、按钮点击）
+- [ ] 区分开发/生产环境，避免污染数据
+- [ ] 看板：PV/UV、来源、停留时长
+
+**参考资料**
+- 百度统计：https://tongji.baidu.com/
+- 在 Next.js 注入第三方脚本：`next/script`：https://nextjs.org/docs/app/api-reference/components/script
+
+---
+
+## 阶段 8 · 收尾与复盘 🧾
+
+**掌握内容**：全链路联调；性能与安全自查清单；把零散经验沉淀为文档。
+
+**关键任务**
+- [ ] 全链路跑通（前端→后台→登录→上传→部署→埋点）
+- [ ] 安全自查（密钥、XSS、SQL 注入已由 Prisma 防住、速率限制）
+- [ ] 写 README / 复盘文档
+
+---
+
+## 执行纪律（本项目约定）
+1. 每个节点开始前先对齐范围，再动手（你确认后再写代码）。
+2. 学过的都要讲透原理，并说明「非 AI 开发者平时在哪打开/维护这个项目」。
+3. 每完成一个节点，更新 `progress-log.md` 的达成状态与问题记录。
+4. 数据库永远在 Docker 里；改表结构先改 `schema.prisma` 再 `migrate dev`。
+5. 每次开机先确认 Docker Desktop 在运行、Node 用 22（`nvm use 22.20.0`）。

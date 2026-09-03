@@ -1,0 +1,9 @@
+allowBuilds:
+  # Prisma 的安装脚本（postinstall）负责下载查询引擎、生成本机二进制。
+  # pnpm 10+ 出于供应链安全默认禁止所有依赖跑脚本，必须在这里显式放行，
+  # 否则 `prisma migrate` / `prisma generate` 会因为缺引擎而报错。
+  # 正常开发里这一步等价于执行 `pnpm approve-builds` 然后在交互界面里勾上这两项。
+  '@prisma/engines': true
+  prisma: true
+  sharp: false
+  unrs-resolver: false

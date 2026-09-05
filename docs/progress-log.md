@@ -263,7 +263,7 @@
   3. `docs/project-structure.md` 补「官方约定速查」+ 私有文件夹说明。
 - **踩坑**：组件移进子目录后，其内部相对 import 要从 `./actions` 改 `../actions`（tsc 报 TS2307 才暴露）。
 - **验证**：`tsc --noEmit` 0 错；`/`、`/login` 均 200。
-- **未做（可选增强，按需加）**：`loading.tsx`（骨架屏）、`error.tsx`（错误边界）——`not-found.tsx` 已在 P24 做了。
+- **未做（可选增强，按需加）**：`loading.tsx`（骨架屏）——`not-found.tsx`（P24）、`error.tsx`（P29 后）已做。
 
 ### P24 · 阶段 4 SEO 收尾 + 自定义 404（零依赖）
 - **动因**：进入阶段 4 剩余工作，先做零依赖、上线必备的 SEO 收尾（sitemap / robots / RSS）与体验收尾（自定义 404）。

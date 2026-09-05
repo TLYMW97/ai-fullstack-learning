@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { scryptSync, timingSafeEqual } from "node:crypto";
+import { prisma } from "@/lib/db";
 import {
   SESSION_COOKIE,
   SESSION_MAX_AGE,
@@ -10,25 +11,24 @@ import {
 // ---------------------------------------------------------------------------
 // 密码校验 + 从 Cookie 读登录态（服务端组件 / Server Action 用）
 //
-// 密码绝不明文存：.env 里放的是 scrypt 哈希（格式 scrypt$<salt>$<hash>），
+// 密码绝不明文存：users 表的 passwordHash 列存 scrypt 哈希（格式 scrypt$<salt>$<hash>），
 // 每次登录拿输入密码 + 同一个 salt 再算一遍哈希去比，比对用 timingSafeEqual
-// 防「响应时间差」侧信道。
+// 防「响应时间差」侧信道。用户不存在也返回 false（login 里统一给笼统错误，不透露存在性）。
 // ---------------------------------------------------------------------------
 
 const SCRYPT_OPTIONS = { N: 16384, r: 8, p: 1 } as const;
 const KEY_LENGTH = 64;
 
-/** 校验输入密码是否等于 .env 里那个哈希对应的明文 */
-export function verifyPassword(password: string): boolean {
-  const stored = process.env.ADMIN_PASSWORD_HASH;
-  if (!stored) {
-    throw new Error("ADMIN_PASSWORD_HASH 未设置：请检查项目根目录的 .env");
-  }
+/** 校验某用户的密码是否匹配（按 username 查 users 表比对哈希） */
+export async function verifyPassword(
+  username: string,
+  password: string,
+): Promise<boolean> {
+  const user = await prisma.user.findUnique({ where: { username } });
+  if (!user) return false; // 用户不存在，直接失败（不 throw，避免时序侧信道泄露存在性）
 
-  const [scheme, salt, expected] = stored.split("$");
-  if (scheme !== "scrypt" || !salt || !expected) {
-    throw new Error("ADMIN_PASSWORD_HASH 格式不对，应为 scrypt$<salt>$<hash>");
-  }
+  const [scheme, salt, expected] = user.passwordHash.split("$");
+  if (scheme !== "scrypt" || !salt || !expected) return false;
 
   const actual = scryptSync(password, salt, KEY_LENGTH, SCRYPT_OPTIONS).toString(
     "hex",

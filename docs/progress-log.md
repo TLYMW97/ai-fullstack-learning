@@ -207,8 +207,8 @@
   - `app/admin/actions.ts`：三个写操作开头加 `await requireAuth()`；新增 `logout()`（清 Cookie 后回 `/login`）。
   - `app/admin/page.tsx`：右上角加「退出登录」按钮（调 `logout`）。
 - **验证**：`tsc --noEmit` **0 错**；独立脚本校验 `ADMIN_PASSWORD_HASH` 对明文密码匹配 ✅、会话令牌签发+校验 round-trip ✅、篡改令牌被拒 ✅；dev server 实测 **未登录 `/admin`→307 跳 `/login`**、`/admin/new` 同、带合法 Cookie 的 `/admin`→**200**、`/login`→200。
-- **管理员明文密码（生成时仅出现一次）：`RZ11GWQ9drQW`** —— 请妥善保存；要改密码就在 `.env` 重新生成一行 `ADMIN_PASSWORD_HASH` 替换（生成命令见下方「改密码」）。
-- **改密码（需要时）**：`node -e "const {scryptSync,randomBytes}=require('node:crypto');const s=randomBytes(16).toString('hex');const h=scryptSync('新密码',s,64,{N:16384,r:8,p:1}).toString('hex');console.log('scrypt\$'+s+'\$'+h)"` → 把输出贴进 `.env` 的 `ADMIN_PASSWORD_HASH`。
+- **管理员密码**：初版把 scrypt 哈希放 `.env`（本条目当时误把明文写进了文档，已在 P22 移除）；现已改为存数据库 `users` 表（P22），改密码方式随之变更，明文不再写进任何文档。
+- ~~改密码~~：见 P22（原 `.env` 方案已废弃，改密码现在改的是 `users` 表）。
 - **待你提供配置再扩展**：B 邮箱验证码（需 SMTP 授权码 / Resend Key）、C 极验（需 GeeTest `captchaId`+`captchaKey`）。届时我会先找你确认再接。
 - **未做/注意**：方案 A 是单用户、密码哈希+密钥放 `.env`，**不改 Prisma schema**（符合「改库先改 schema」纪律，这里压根没动库）；无「登录失败次数限制」（防暴力破解属 B/C 范畴，已注明）。
 
@@ -224,7 +224,7 @@
 - **动因**：用户反馈「文件结构/命名/api 拆分乱、可维护性差，甚至还有 `[id]` 当路径名」，要求按标准项目结构 + 前后端规范重构、降耦合、目录区分清楚、命名语义化、数据库按规范。
 - **体检结论（先澄清后改）**：通过 `git status` 发现——用户看到的「乱」有相当一部分是**误把「未 commit 的新工作」当成结构问题**：`[id]→[postId]`、`lib/posts.ts` DAL、`lib/auth`/`session`、`components/`、`proxy.ts`、登录页等在上一轮已落地但**全都没 commit**，`git` 提交树还停留在旧版 `[id]`，看起来就像一大堆没整理的文件。逐条核实后：
   1. **`[postId]`（及 `[id]`）方括号 = App Router 动态路由段语法**，不是命名错误、也不能去掉方括号；能优化的是段名语义化（已用 `postId` 而非 `id`）。→ 这属于「框架约定」，改不得，需向用户讲清。
-  2. **DB 模型名 `Post`（大写单数）= Prisma/Postgres 默认约定**，Prisma 自动映射复数表名 `posts`；且 `prisma/migrations/` 是 2 条可回滚迁移史，是学习项目里宝贵的可回滚真相。→ 保持 `Post` 不动，避免毁迁移史。
+  2. **DB 模型名 `Post`（大写单数）= Prisma 默认约定**：Prisma 默认表名 = 模型名原样（`Post` → 表 `"Post"`），**不会自动复数化**（本条目原写「自动映射复数 posts」有误，P22 纠正）。`prisma/migrations/` 是可回滚迁移史。→ 保持 `Post` 不动，避免毁迁移史。
   3. **数据层 `lib/posts.ts` + `lib/auth`/`session` 分层已存在**，耦合已较低。
 - **本轮实际做的结构改进（全部 DB 不动、URL 不变、行为不变）**：
   - **路由分组**：把公开前台收进 `app/(public)/`（括号 = 路由分组，**不产生 URL 段**）→ 首页 `app/(public)/page.tsx`、文章 `app/(public)/posts/[postId]/page.tsx`；`admin/`（后台）与 `login/`（鉴权）留在 app 根作清晰的控制台/鉴权目录。浏览器访问 `/`、`/posts/3` 等 URL 完全不变。视觉上「访客浏览的站点」与「站长控制台 + 登录」一眼分开。
@@ -235,6 +235,24 @@
 - **未做（刻意）**：不重命名 DB `Post`（保迁移史）；不做 admin/login 的路由分组（无共享 layout、纯加目录层级无收益，YAGNI）；不搬 `lib/generated/prisma`（已 gitignore、仅 1 处 import，搬它风险大于收益）。
 - **待你拍板**：阶段 1 之后（P15 起，含视觉升级/鉴权/后台/本次结构）所有改动**尚未 commit**。要不要我把它整理成一个「结构规范化」基线 commit？确认后我按 `docs/project-structure.md` 分组提交。
   - ✅ **已解决**：已合并为单个基线提交 `e440b2b`（34 文件，+1439/−304）。`.env`/`lib/generated`/`node_modules`/`.next`/编辑器导出的 `progress-log.html` 均未入库。
+
+### P22 · 密码迁库 + 新增 User 表（预留多用户）
+- **动因**：用户问「密码存哪、不能建表存用户吗」，明确两点：① 明文不该写文档（此前 P19 误把明文写进了 progress-log.md 并进了 git 历史）；② 数据库应该建表存管理员/用户信息。
+- **方案**：新增 `User` 表存 scrypt 哈希，**预留多用户**（username/email 唯一索引）；会话仍用签名 Cookie（暂不加 Session 表，YAGNI）。
+- **改动文件**：
+  - `prisma/schema.prisma`：加 `User` 模型（`username` @unique / `email` String? @unique / `passwordHash`），`@@map("users")`。
+  - `prisma/migrations/20260905124708_add_user_table`：迁移 + username/email 两个唯一索引。
+  - `lib/auth.ts`：`verifyPassword(username, password)` 从「读 .env 哈希」改为「按 username 查 users 表比对 passwordHash」，改 async、用户不存在返回 false。
+  - `app/login/actions.ts` + `app/login/page.tsx`：登录加 username 输入。
+  - `.env`：删 `ADMIN_PASSWORD_HASH`（密码已迁库），只留 `SESSION_SECRET`。
+  - `docs/progress-log.md` / `.workbuddy/memory`：移除明文密码。
+- **数据**：seed 初始管理员 `username=admin`（沿用原 scrypt 哈希，密码不变），`email` 暂空。
+- **纠正的认知错误**：Prisma **默认表名 = 模型名原样**（`Post` → 表 `"Post"`），**不会自动复数化**——此前 project-structure.md / P21 写「自动映射复数 posts」是错的，已纠正。要复数表名必须显式 `@@map`。
+- **踩坑（P8 复发）**：`@updatedAt` 数据库层无 DEFAULT，裸 SQL seed 必须显式给 `updatedAt`，否则 NOT NULL 报错（第一次 seed 失败，SERIAL 序列因此跳号 id=2）。
+- **未做 / 待你定**：
+  1. `User` 是 PG 保留字，故用 `@@map("users")`；但 `Post` 表仍是默认名 `"Post"`，两表命名暂不一致。要不要给 `Post` 也 `@@map("posts")` 做改名迁移？改表名有迁移风险，且现有数据/迁移史要动，等你拍板。
+  2. 未加注册页 / 改密码 UI（预留了多用户结构，但前端入口没做）。
+  3. **旧明文密码已进 git 历史**（`e440b2b` 之前的 P19 记录）。若将来 push，建议换密码——届时我帮你重新生成哈希更新 users 表即可。
 
 ## 三、待你确认/待办
 - [x] 第一阶段成果已 `git commit` 到本地 `main`（`a5bd1a3`，32 文件）。未 push（需你确认远端与分支策略）。`lib/generated/prisma` 已 gitignore 不进库；`node_modules` 内 junction/package.json 临时改动不进库。

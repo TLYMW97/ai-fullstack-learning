@@ -22,9 +22,8 @@ datasource db {
   provider = "postgresql"
 }
 
-// ---------- model：一张表 ----------
-// 先只做一张 Post 表，把"改 schema → 生成迁移 → 读写数据"这条链路跑通，
-// 后面再加 User / Comment / Tag 都是同一套动作的重复。
+// ---------- model：表 ----------
+// Post 表已跑通「改 schema → 生成迁移 → 读写数据」这条链路；下面的 User 表是同一套动作的重复。
 model Post {
   // @id            = 主键
   // @default(autoincrement()) = 交给数据库自增，对应 PostgreSQL 的 SERIAL/IDENTITY
@@ -47,4 +46,21 @@ model Post {
 
   // 公开列表按 published 过滤 + createdAt 排序，加复合索引让查询走索引而非全表扫
   @@index([published, createdAt])
+}
+
+// ---------- model：用户/管理员 ----------
+// 预留多用户：username 唯一作登录标识；email 可空唯一（以后注册 / 找回密码用）。
+// 密码只存 scrypt 哈希（格式 scrypt$<salt>$<hash>），绝不明文。
+// @@map("users")：显式指定表名。因为 User 是 PostgreSQL 保留字（SELECT USER 是关键字），
+// 用默认表名 "User"（带引号）裸 SQL 很麻烦；复数 snake_case 也更符合 PG 惯例。
+// 注意：Post 模型没写 @@map，所以它的默认表名就是 "Post" —— Prisma 默认表名=模型名，不会自动复数。
+model User {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  email        String?  @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("users")
 }

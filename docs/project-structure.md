@@ -67,9 +67,9 @@ ai-blog/
 > 想读一个「普通参数化」URL（如 `/blog/my-post-slug`）时，同样用 `[slug]` 段——方括号语法躲不开，能优化的是命名。
 
 ### 2. 数据库模型为什么叫 `Post`（大写单数）？
-这是 **Prisma / PostgreSQL 的默认约定**，不是没规范：
-- Prisma 模型名用**单数 PascalCase**（`Post`），默认映射的**数据库表名是复数 snake_case**（`posts`）——Prisma 会自动转换，你不用手写表名。
-- 所以「表名是否复数」这件事 Prisma 已替你管好，模型写 `Post` 是标准写法。
+这是 **Prisma 的默认约定**，不是没规范：
+- Prisma 模型名用**单数 PascalCase**（`Post`），**默认表名 = 模型名原样**（`Post` → 表 `"Post"`）——Prisma **不会**自动复数化/snake_case 转换。
+- 想用复数表名要**显式** `@@map("posts")`（本项目 `User` 模型就用了 `@@map("users")`，一是复数 snake_case 符合 PostgreSQL 惯例，二是 `User` 是 PG 保留字）。
 - 要改的是**字段语义**而非大小写。当前字段（`title/content/published/createdAt/updatedAt`）已语义化；公开列表已加 `@@index([published, createdAt])` 走索引。
 
 ### 3. 文件 / 函数 / 变量命名

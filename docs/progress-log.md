@@ -19,7 +19,7 @@
 | 7 | 数据埋点（百度统计） | ⬜ | 未开始 |
 | 8 | 收尾与复盘 | ⬜ | 未开始 |
 
-**代码提交状态**：截至目前所有文件仍未 `git commit`（仅 `.gitignore` 有修改）。需要提交时由你确认后我再执行。
+**代码提交状态**：阶段 1 之后的工作（P15–P21：视觉升级 / 鉴权 / 后台管理 / 结构规范化）已合并为一个基线提交 `e440b2b`。仍未 push 远端（需你确认远端与分支策略）。
 
 ---
 
@@ -234,9 +234,11 @@
 - **验证**：`tsc --noEmit` **0 错**；dev server 实测 `/`、`/posts/3`、`/login` 均 **200**（路由分组不破坏 URL）；`git status` 正确识别 `app/page.tsx → app/(public)/page.tsx` 的 move。清理 `app/api` 空目录成功。
 - **未做（刻意）**：不重命名 DB `Post`（保迁移史）；不做 admin/login 的路由分组（无共享 layout、纯加目录层级无收益，YAGNI）；不搬 `lib/generated/prisma`（已 gitignore、仅 1 处 import，搬它风险大于收益）。
 - **待你拍板**：阶段 1 之后（P15 起，含视觉升级/鉴权/后台/本次结构）所有改动**尚未 commit**。要不要我把它整理成一个「结构规范化」基线 commit？确认后我按 `docs/project-structure.md` 分组提交。
+  - ✅ **已解决**：已合并为单个基线提交 `e440b2b`（34 文件，+1439/−304）。`.env`/`lib/generated`/`node_modules`/`.next`/编辑器导出的 `progress-log.html` 均未入库。
 
 ## 三、待你确认/待办
 - [x] 第一阶段成果已 `git commit` 到本地 `main`（`a5bd1a3`，32 文件）。未 push（需你确认远端与分支策略）。`lib/generated/prisma` 已 gitignore 不进库；`node_modules` 内 junction/package.json 临时改动不进库。
+- [x] 阶段 1 之后（P15–P21）已合并为基线提交 `e440b2b`。未 push。
 - [x] 阶段 1 全功能 CRUD + Markdown 已通过验证（见 P11–P14）
 - [x] 阶段 2 方案 A：密码 + Cookie 会话（零外部依赖）已落地，见 P19；后台 `/admin` 已加密保护
 - [ ] 阶段 2 方案 B/C：邮箱验证码登录 / 极验 —— 需要你提供对应配置（SMTP 授权码或 Resend Key / GeeTest captchaId+captchaKey），确认后再扩展

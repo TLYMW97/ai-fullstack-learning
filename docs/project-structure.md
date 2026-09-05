@@ -24,7 +24,8 @@ ai-blog/
 │  ├─ admin/                #   后台管理（被 proxy.ts 保护，未登录跳 /login）
 │  │  ├─ page.tsx           #   → /admin            文章管理列表
 │  │  ├─ actions.ts         #   create/update/delete/logout Server Action
-│  │  ├─ DeleteButton.tsx   #   客户端删除按钮（含二次确认）
+│  │  ├─ _components/       #   私有文件夹（下划线开头 = 不参与路由，放该段专属组件）
+│  │  │  └─ DeleteButton.tsx #  客户端删除按钮（含二次确认）
 │  │  ├─ new/page.tsx       #   → /admin/new        写文章
 │  │  └─ [postId]/edit/     #   → /admin/:postId/edit  编辑文章
 │  │     └─ page.tsx
@@ -58,6 +59,13 @@ ai-blog/
 
 ## 二、命名约定
 
+### 0. 官方约定速查（对照 nextjs.org project-structure）
+本项目结构对齐 Next.js 官方约定，核心几条：
+- **顶层文件**放项目根：`proxy.ts`（Next 16 的路由代理）、`next.config.ts`、`tsconfig.json`、`.env`、`package.json` 等。
+- **路由文件用约定名**：`page.tsx`（暴露路由）、`layout.tsx`（共享布局）、`route.ts`（API）、`loading.tsx`（骨架）、`error.tsx`（错误边界）、`not-found.tsx`（404 UI）。
+- **动态段** `[segment]` / 捕获 `[...segment]`；**路由组** `(group)`（组织路由不改 URL）；**私有文件夹** `_folder`（不参与路由）。
+- 组织方式官方「没有意见」，本项目采用「**项目文件放 app 外**（`components/`、`lib/` 在根）+ 路由专属文件并置在对应段」。
+
 ### 1. 为什么路由目录里有 `[postId]`？
 这是 **Next.js App Router 的动态路由段语法**，不是命名错误，也不能改成普通名字：
 - `app/posts/[postId]/page.tsx` → 匹配 `/posts/1`、`/posts/abc`，方括号里的 `postId` 会被 Next 解析进 `params`。
@@ -74,6 +82,7 @@ ai-blog/
 
 ### 3. 文件 / 函数 / 变量命名
 - 页面组件：`page.tsx`（Next 约定），按路由语义起父目录名（`new`/`edit`）。
+- 路由段专属组件：放该段下的**私有文件夹 `_components/`**（如 `app/admin/_components/DeleteButton.tsx`）——下划线开头不参与路由，和 `page.tsx` 一眼分开。
 - 服务端逻辑：动词开头、表意 —— `getPublishedPosts`、`createPost`、`requireAuth`、`startSession`。
 - Server Action：与 DAL 同名但作用不同（`createPost` 收表单+鉴权+失效缓存 vs `repoCreatePost` 只写库），靠前缀/注释区分，避免手滑跨层。
 - 常量全大写：`SESSION_COOKIE`、`SESSION_MAX_AGE`。

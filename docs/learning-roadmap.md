@@ -48,12 +48,12 @@
 
 ---
 
-## 阶段 2 · 后台管理系统与登录 🔐 🟡（方案 A：密码+Cookie 会话已落地；邮箱/极验待扩展）
+## 阶段 2 · 后台管理系统与登录 🔐 🟡（方案 A：密码已迁库 users 表；邮箱/极验待扩展）
 
 **掌握内容**：会话与鉴权模型（Cookie/Session/JWT）；第三方验证（极验 GeeTest 人机校验）；邮箱验证码登录；受保护路由；管理后台 UI。
 
 **关键任务**
-- [x] 鉴权方案：自建 Session（密码 + Cookie 会话，纯 `node:crypto`，零外部依赖，见 P19）。Auth.js（NextAuth）作为后续备选，本阶段不引入以保持最小依赖
+- [x] 鉴权方案：自建 Session（密码 + Cookie 会话，纯 `node:crypto`，零外部依赖，见 P19）；密码哈希已迁库到 `User` 表（`username`/`email` 唯一，预留多用户，见 P22）。Auth.js（NextAuth）作为后续备选，本阶段不引入以保持最小依赖
 - [ ] 接入**极验 GeeTest**：前端滑块校验 + 后端二次校验 —— 待你提供 GeeTest `captchaId`+`captchaKey`
 - [ ] **邮箱验证码登录**：发码（SMTP / 邮件服务）→ 校验 → 签发会话 —— 待你提供 SMTP 授权码或 Resend Key
 - [x] 受保护的管理后台：`/admin` 下文章管理表格（增删改查、**删除二次确认弹窗**、**公开列表隐藏草稿**；方案 A 已加 `proxy.ts` 路由保护 + 写操作 `requireAuth()` 硬闸门，见 P19/P20）
@@ -98,6 +98,7 @@
 - [ ] 标签分类（需 `Post` 加 `tags` 字段 + 迁移）、标签页 / 搜索；分页与加载态
 - [x] 静态化与 ISR：`app/page.tsx` + `app/posts/[id]/page.tsx` 加 `export const revalidate = 60`，详情页 `generateStaticParams` 预渲染已有文章（`dynamicParams` 默认 true，新文章按需渲染）；dev 下不生效，生产 `next build` 才真正静态化（见 P16）
 - [x] 代码体检与加固：Server Action 变更后 `revalidatePath` 一致性（首页 / 后台 / 详情都要刷）、`Number(formData.get("id"))` 的 NaN 守卫失效（`Number(null)===0`）、动态路由 `Number(id)` 非数字要 `notFound()` 而非 500；后台加 `force-dynamic`、后台页面统一设计令牌（见 P18）
+- [x] 项目结构规范化：路由分组 `(public)`、动态段 `[postId]` 语义化、私有文件夹 `_components/`、分层 import 边界，并对照 Next.js 官网 project-structure 成文（`docs/project-structure.md`，见 P21/P23）
 - [ ] SEO 收尾：sitemap、RSS、robots、Open Graph（metadata 基础已做）
 
 **参考资料**

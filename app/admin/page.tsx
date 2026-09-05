@@ -1,6 +1,6 @@
 import { logout } from "./actions";
 import { getAdminPosts } from "@/lib/posts";
-import { DeleteButton } from "./DeleteButton";
+import { DeleteButton } from "./_components/DeleteButton";
 
 // 后台文章管理页：/admin
 // 列出全部文章（含草稿），每条带「编辑」链接和「删除」按钮。

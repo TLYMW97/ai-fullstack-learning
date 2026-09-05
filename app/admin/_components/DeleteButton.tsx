@@ -6,7 +6,7 @@
 // 所以包一层 "use client"。但它仍然复用 deletePost 这个 Server Action——
 // 直接当 <form action={deletePost}> 提交，confirm 通过才放行，否则 preventDefault 拦掉。
 // 这样既有二次确认，又不用自己写 fetch 调接口（Server Action 把请求协议都封装好了）。
-import { deletePost } from "./actions";
+import { deletePost } from "../actions";
 
 export function DeleteButton({ id, title }: { id: number; title: string }) {
   return (

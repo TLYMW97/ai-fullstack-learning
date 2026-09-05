@@ -11,7 +11,7 @@
 |---|---|---|---|
 | 0 | 环境与工程地基 | ✅ | Node/npm/pnpm、脚手架、Docker PG、Prisma 读写闭环全部完成 |
 | 1 | 博客基础功能 CRUD | ✅ | 列表/详情/Markdown/写/改/删全部走通并验证（验证法与事故见 P11–P14）。`tsc --noEmit` 0 错、`prisma generate` 通过 |
-| 2 | 后台管理 + 登录（方案 A 已落地，B/C 待扩展） | 🟡 | 方案 A：密码+Cookie 会话已落地；邮箱验证码/极验待你提供配置 |
+| 2 | 后台管理 + 登录（方案 A 已落地，B/C 待扩展） | 🟡 | 密码已迁库到 `users` 表（预留多用户，P22）；会话仍签名 Cookie；邮箱验证码/极验待你提供配置 |
 | 3 | 文件上传（腾讯云 COS） | ⬜ | 未开始 |
 | 4 | 前端体验与工程化 | 🟡 | 期1设计系统地基+期2首页/详情已落地（见 P15）；标签分类/SSG/SEO 收尾待做 |
 | 5 | 部署与服务器运维 | ⬜ | 仅本地 Docker，未上云 |
@@ -253,6 +253,17 @@
   1. `User` 是 PG 保留字，故用 `@@map("users")`；但 `Post` 表仍是默认名 `"Post"`，两表命名暂不一致。要不要给 `Post` 也 `@@map("posts")` 做改名迁移？改表名有迁移风险，且现有数据/迁移史要动，等你拍板。
   2. 未加注册页 / 改密码 UI（预留了多用户结构，但前端入口没做）。
   3. **旧明文密码已进 git 历史**（`e440b2b` 之前的 P19 记录）。若将来 push，建议换密码——届时我帮你重新生成哈希更新 users 表即可。
+
+### P23 · 对照 Next.js 官网 project-structure 规范化收尾
+- **动因**：用户给 nextjs.net.cn 的 project-structure 官方文档，要求参照官方规范。
+- **体检结论**：当前结构**已基本符合官方**。官方对组织方式「没有意见」，核心约定是——顶层文件（`proxy.ts`/`next.config`/`.env`/`tsconfig`）在根、路由文件约定名（`page`/`layout`/`route`）、动态段 `[segment]`、路由组 `(group)`、私有文件夹 `_folder`。项目已命中大部分（`(public)`、`[postId]`、`components`/`lib` 放 app 外）。
+- **本轮实际改（3 处）**：
+  1. `app/admin/DeleteButton.tsx` → `app/admin/_components/DeleteButton.tsx`（官方「私有文件夹 `_folder`」约定：下划线开头不参与路由，UI 组件与 `page.tsx` 分离；对应官方示例 `app/blog/_components/Post.tsx`）。
+  2. 清理 `public/` 里 5 个 `create-next-app` 脚手架默认 svg（file/globe/next/vercel/window），grep 确认零引用。
+  3. `docs/project-structure.md` 补「官方约定速查」+ 私有文件夹说明。
+- **踩坑**：组件移进子目录后，其内部相对 import 要从 `./actions` 改 `../actions`（tsc 报 TS2307 才暴露）。
+- **验证**：`tsc --noEmit` 0 错；`/`、`/login` 均 200。
+- **未做（可选增强，按需加）**：`loading.tsx`（骨架屏）、`error.tsx`（错误边界）、`not-found.tsx`（自定义 404）——这些是「加功能」非「结构规范」。其中 `not-found.tsx` 建议做（当前 `notFound()` 弹默认英文 404，体验差）。
 
 ## 三、待你确认/待办
 - [x] 第一阶段成果已 `git commit` 到本地 `main`（`a5bd1a3`，32 文件）。未 push（需你确认远端与分支策略）。`lib/generated/prisma` 已 gitignore 不进库；`node_modules` 内 junction/package.json 临时改动不进库。

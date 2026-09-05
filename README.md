@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI 全栈学习博客
 
-## Getting Started
+一个边学边写的 AI 原生全栈博客项目——从 0 到 1 完整走通「前端 + 后台管理 + 后端 + 数据库」，记录踩过的坑，最终目标是可独立上线交付。
 
-First, run the development server:
+## 技术栈
+
+| 层 | 技术 |
+|---|---|
+| 框架 | Next.js 16（App Router）+ React 19 |
+| 语言 | TypeScript |
+| 样式 | Tailwind CSS v4（设计令牌 + 暗色主题） |
+| 数据库 | PostgreSQL 17（Docker）+ Prisma 7 |
+| 鉴权 | 密码（scrypt）+ 极验 GeeTest v4 + 签名 Cookie 会话 |
+
+## 功能
+
+- 文章 CRUD + Markdown 渲染（react-markdown）
+- 登录鉴权：用户名密码 + 极验滑块，`proxy.ts` 保护后台，写操作硬闸门
+- 标签分类 + 标题搜索 + 分页
+- 首页精选大卡 + 暗色主题 + 阅读进度条
+- SSG/ISR 静态化、SEO（sitemap / robots / RSS）、自定义 404
+
+## 快速开始
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+# 1. 起数据库（Docker）
+docker compose up -d
+
+# 2. 装依赖（Node ≥ 20.9，pnpm）
+pnpm install
+
+# 3. 配环境变量
+cp .env.example .env   # 填入 DATABASE_URL / SESSION_SECRET 等
+
+# 4. 建表（迁移）+ 生成 Prisma 客户端
+pnpm exec prisma migrate dev
+pnpm exec prisma generate
+
+# 5. 跑起来
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+打开 http://localhost:3100 （默认端口见 `next.config.ts`）。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+> 首次登录需要先 seed 一个管理员进 `users` 表（`username` + scrypt 哈希的 `passwordHash`），参考 `docs/progress-log.md` 的 P22。
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 项目结构
 
-## Learn More
+完整的分层、命名约定、import 边界见 [`docs/project-structure.md`](docs/project-structure.md)。一句话：`app/` 只放路由，`components/` 放 UI，`lib/` 放业务逻辑（`lib/posts.ts` 是唯一碰数据库的入口）。
 
-To learn more about Next.js, take a look at the following resources:
+## 文档
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [`docs/learning-roadmap.md`](docs/learning-roadmap.md) — 学习路线图与任务节点
+- [`docs/progress-log.md`](docs/progress-log.md) — 进度与踩坑记录（P1 → P26）
+- [`docs/project-structure.md`](docs/project-structure.md) — 结构约定

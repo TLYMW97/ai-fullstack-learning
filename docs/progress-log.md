@@ -306,6 +306,18 @@
 - **验证**：`tsc --noEmit` 0 错；登录页渲染出 `geetest-captcha` 滑块容器 ✅；后端 `sign_token` 算法对照官方文档（`HMAC-SHA256(key, lot_number)` hexdigest）确认正确。**完整闭环（滑块→二次校验→成功）需用户浏览器实测**（curl 无法模拟滑块通过，同 P11 同理）。
 - **待办**：邮箱验证码（方案 B）——用户已选 QQ/163 SMTP，待提供 SMTP 邮箱 + 授权码后继续。
 
+### P27 · 阶段 8 收尾：安全自查 + README
+- **动因**：阶段 0~4 完成、极验接入后，剩余待办都卡在外部信息（SMTP 授权码 / 服务器），先做阶段 8 不依赖外部信息的收尾。
+- **安全自查结论**：
+  - **XSS ✅**：react-markdown **未用 rehype-raw**（不渲染原始 HTML）；React 默认转义文本；`dangerouslySetInnerHTML` 仅 `ThemeScript`（内联脚本内容写死、非用户输入）。
+  - **SQL 注入 ✅**：业务代码全部走 Prisma 参数化查询，无裸 SQL（`$queryRaw` 只出现在生成的客户端里）。
+  - **密钥 ✅**：`.env` 已 gitignore；`SESSION_SECRET`/`GEETEST_KEY` 不入库；密码只存 scrypt 哈希（users 表）。
+  - **CSRF ✅**：会话 Cookie `SameSite=Lax`。
+  - **越权 ✅**：后台三个写操作都有 `requireAuth()` 硬闸门。
+  - **错误信息 ✅**：登录失败回笼统错误，不透露用户存在性。
+  - **速率限制 ⚠️**：无登录失败次数限制；极验已挡机器暴力破解，真人暴力属低风险，暂不加。
+- **改动**：重写 `README.md`（原为 create-next-app 英文默认模板 → 中文、反映真实技术栈/功能/快速开始/文档导航）；`.env.example` 补 `SESSION_SECRET`/`GEETEST_ID`/`GEETEST_KEY` 占位符。
+
 ## 三、待你确认/待办
 - [x] 第一阶段成果已 `git commit` 到本地 `main`（`a5bd1a3`，32 文件）。未 push（需你确认远端与分支策略）。`lib/generated/prisma` 已 gitignore 不进库；`node_modules` 内 junction/package.json 临时改动不进库。
 - [x] 阶段 1 之后（P15–P21）已合并为基线提交 `e440b2b`。未 push。

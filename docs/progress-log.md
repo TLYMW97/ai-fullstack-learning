@@ -11,7 +11,7 @@
 |---|---|---|---|
 | 0 | 环境与工程地基 | ✅ | Node/npm/pnpm、脚手架、Docker PG、Prisma 读写闭环全部完成 |
 | 1 | 博客基础功能 CRUD | ✅ | 列表/详情/Markdown/写/改/删全部走通并验证（验证法与事故见 P11–P14）。`tsc --noEmit` 0 错、`prisma generate` 通过 |
-| 2 | 后台管理 + 登录（方案 A 已落地，B/C 待扩展） | 🟡 | 密码已迁库到 `users` 表（预留多用户，P22）；会话仍签名 Cookie；邮箱验证码/极验待你提供配置 |
+| 2 | 后台管理 + 登录 | ✅ | A 密码+Cookie 会话（密码迁库 users 表）+ B 邮箱验证码 + C 极验，三种方式全部落地（P19/P26/P28） |
 | 3 | 文件上传（腾讯云 COS） | ⬜ | 未开始 |
 | 4 | 前端体验与工程化 | 🟡 | 期1设计系统地基+期2首页/详情已落地（见 P15）；标签分类/SSG/SEO 收尾待做 |
 | 5 | 部署与服务器运维 | ⬜ | 仅本地 Docker，未上云 |
@@ -318,11 +318,29 @@
   - **速率限制 ⚠️**：无登录失败次数限制；极验已挡机器暴力破解，真人暴力属低风险，暂不加。
 - **改动**：重写 `README.md`（原为 create-next-app 英文默认模板 → 中文、反映真实技术栈/功能/快速开始/文档导航）；`.env.example` 补 `SESSION_SECRET`/`GEETEST_ID`/`GEETEST_KEY` 占位符。
 
+### P28 · 阶段 2 方案 B：邮箱验证码登录（QQ SMTP + nodemailer）
+- **动因**：用户提供 QQ 邮箱 SMTP 授权码，接入邮箱验证码登录（方案 B，阶段 2 最后一块）。
+- **首次引入外部依赖 `nodemailer`**：Node 标准库没有 SMTP 客户端，手写协议复杂易错；nodemailer 是发邮件的事实标准，属功能性必需（项目唯一的外部运行依赖）。之前一直零依赖，故在此说明。
+- **改动文件**：
+  - `.env`：加 `SMTP_USER` / `SMTP_PASS`（QQ 授权码，gitignore 不入库）。
+  - **新增** `lib/mailer.ts`：nodemailer + QQ SMTP（`smtp.qq.com:465` SSL）发验证码邮件。
+  - **新增** `lib/verification.ts`：验证码生成（`crypto.randomInt` 6 位）+ 内存 Map 存储（挂 `globalThis` 防热更新丢失）+ 5 分钟过期 + **一次性校验**（用过即删，防重放）。
+  - `lib/auth.ts`：加 `findUserByEmail()`。
+  - `app/login/actions.ts`：加 `sendCode(email)`（只给已注册邮箱发码，返回 `{ok,error}`）+ `verifyCodeLogin(formData)`（验码 → 查用户 → 签发会话）。
+  - `app/login/_components/EmailCodeForm.tsx`（客户端）：邮箱 + 验证码 + 「发送验证码」按钮（60s 倒计时防连点）。
+  - `app/login/page.tsx`：加「账号登录 / 验证码登录」双入口切换（`?mode=code`）。
+- **数据**：admin 用户的 email 设为 `751112877@qq.com`（验证码登录靠 email 匹配用户）。
+- **踩坑**：
+  1. **沙箱把 pnpm 软链弄空壳（P12 复发）**：`pnpm add nodemailer` 后顶层 `node_modules/nodemailer` 是空目录，tsc 报找不到模块。修复：`fs.symlinkSync(real, dst, "junction")` 重指到 `.pnpm/nodemailer@10.0.0/node_modules/nodemailer`。
+  2. **正则 `^` 缺 `m` 多行标志**：读 `.env` 时 `env.match(/^KEY=.../)` 没加 `m`，只匹配文件首行，读不到后面的 SMTP 配置 → nodemailer 报 `Missing credentials`。修复：正则加 `m`。
+- **验证**：`tsc --noEmit` 0 错；登录页渲染「账号/验证码」双入口 ✅；直连 QQ SMTP 发测试邮件成功（授权码有效）✅。**完整闭环（发码 → 收邮件 → 输码登录）需用户浏览器实测**。
+- **至此阶段 2 全部完成**：A 密码 + C 极验 + B 邮箱验证码，三种方式全部落地。
+
 ## 三、待你确认/待办
 - [x] 第一阶段成果已 `git commit` 到本地 `main`（`a5bd1a3`，32 文件）。未 push（需你确认远端与分支策略）。`lib/generated/prisma` 已 gitignore 不进库；`node_modules` 内 junction/package.json 临时改动不进库。
 - [x] 阶段 1 之后（P15–P21）已合并为基线提交 `e440b2b`。未 push。
 - [x] 阶段 1 全功能 CRUD + Markdown 已通过验证（见 P11–P14）
 - [x] 阶段 2 方案 A：密码 + Cookie 会话（零外部依赖）已落地，见 P19；后台 `/admin` 已加密保护
 - [x] 阶段 2 方案 C：极验 GeeTest v4 已接入（见 P26）
-- [ ] 阶段 2 方案 B：邮箱验证码登录 —— 已选 QQ/163 SMTP，待提供 SMTP 邮箱 + 授权码后接入
+- [x] 阶段 2 方案 B：邮箱验证码登录 —— 已接入（QQ SMTP + nodemailer，见 P28）
 - [ ] 前端开发编辑器（VS Code）是否已就绪、远程仓库分支策略（main/develop）确定后再 push

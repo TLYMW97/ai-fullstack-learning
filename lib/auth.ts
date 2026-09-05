@@ -40,6 +40,11 @@ export async function verifyPassword(
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+/** 按邮箱查用户（邮箱验证码登录用），不存在返回 null */
+export function findUserByEmail(email: string) {
+  return prisma.user.findUnique({ where: { email } });
+}
+
 /** 当前请求是否已登录 */
 export async function isLoggedIn(): Promise<boolean> {
   // Next 15/16 起 cookies() 是异步的，必须 await

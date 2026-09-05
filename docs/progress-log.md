@@ -293,10 +293,24 @@
 - **验证**：`tsc --noEmit` 0 错；seed 测试标签后实测：首页标签区块 ✅、`?tag=Next.js` 只出 2 篇 ✅、`?q=Prisma` 只出 1 篇 ✅、`/admin/new` 含 tags 字段 ✅、登录页组件化后正常 ✅。分页因当前仅 4 篇（每页 6）未实际触发，逻辑已 review。
 - **注意**：现有文章标签是测试 seed 的数据（id3=Next.js/部署、id4=Prisma/数据库、id8=Next.js），真实使用请后台自行编辑补标签。
 
+### P26 · 阶段 2 方案 C：极验 GeeTest v4 人机验证
+- **动因**：用户提供极验 `captcha_id` + `captcha_key`，接入滑块人机验证（方案 C，叠在密码登录之上防暴力破解）。
+- **安全概念（教学点）**：滑块在前端通过后产生的参数（`lot_number`/`captcha_output`/`pass_token`/`gen_time`）**可被伪造**，前端结果不能信。后端必须用 `captcha_key` 重新签名、调极验 `validate` 接口**二次校验**，只有 `result=success` 才放行。
+- **改动文件**：
+  - `.env`：加 `GEETEST_ID`（公开）+ `GEETEST_KEY`（保密，后端签名用）。
+  - **新增** `lib/geetest.ts`：`verifyGeetest()` 用 `node:crypto` 的 HMAC-SHA256（key=captcha_key, msg=lot_number）手写 `sign_token`，POST 调 `gcaptcha4.geetest.com/validate` 二次校验。**零新增依赖**。
+  - **新增** `app/login/_components/GeetestCaptcha.tsx`（"use client"）：动态加载 `gt4.js` + `initGeetest4` 滑块，验证成功把 4 个参数写成 hidden input 随表单提交。
+  - `app/login/actions.ts`：login 先过极验（失败 redirect `/login?error=captcha`），再过密码（失败 `/login?error=1`）。
+  - `app/login/page.tsx`：加滑块组件，区分「请先完成滑块验证」/「用户名或密码不对」两种错误。
+- **设计取舍**：极验接口异常时选 **fail-closed**（拒绝登录）而非官方建议的 fail-open（放行）——登录是安全敏感场景，宁可「极验挂了暂时登不进」也不放水。
+- **验证**：`tsc --noEmit` 0 错；登录页渲染出 `geetest-captcha` 滑块容器 ✅；后端 `sign_token` 算法对照官方文档（`HMAC-SHA256(key, lot_number)` hexdigest）确认正确。**完整闭环（滑块→二次校验→成功）需用户浏览器实测**（curl 无法模拟滑块通过，同 P11 同理）。
+- **待办**：邮箱验证码（方案 B）——用户已选 QQ/163 SMTP，待提供 SMTP 邮箱 + 授权码后继续。
+
 ## 三、待你确认/待办
 - [x] 第一阶段成果已 `git commit` 到本地 `main`（`a5bd1a3`，32 文件）。未 push（需你确认远端与分支策略）。`lib/generated/prisma` 已 gitignore 不进库；`node_modules` 内 junction/package.json 临时改动不进库。
 - [x] 阶段 1 之后（P15–P21）已合并为基线提交 `e440b2b`。未 push。
 - [x] 阶段 1 全功能 CRUD + Markdown 已通过验证（见 P11–P14）
 - [x] 阶段 2 方案 A：密码 + Cookie 会话（零外部依赖）已落地，见 P19；后台 `/admin` 已加密保护
-- [ ] 阶段 2 方案 B/C：邮箱验证码登录 / 极验 —— 需要你提供对应配置（SMTP 授权码或 Resend Key / GeeTest captchaId+captchaKey），确认后再扩展
+- [x] 阶段 2 方案 C：极验 GeeTest v4 已接入（见 P26）
+- [ ] 阶段 2 方案 B：邮箱验证码登录 —— 已选 QQ/163 SMTP，待提供 SMTP 邮箱 + 授权码后接入
 - [ ] 前端开发编辑器（VS Code）是否已就绪、远程仓库分支策略（main/develop）确定后再 push

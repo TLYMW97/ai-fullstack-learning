@@ -2,6 +2,7 @@ import { Container } from "@/components/Container";
 import { login } from "./actions";
 import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Field";
+import { GeetestCaptcha } from "./_components/GeetestCaptcha";
 
 // 登录页：/login
 // 服务端组件 + Server Action，密码只发到服务端，不经过任何前端状态。
@@ -12,6 +13,8 @@ export default async function LoginPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
+  // captcha_id 是公开值，服务端从 .env 读出后传给客户端滑块组件
+  const captchaId = process.env.GEETEST_ID ?? "";
 
   return (
     <Container className="py-20">
@@ -44,7 +47,14 @@ export default async function LoginPage({
             />
           </Field>
 
-          {error && <p className="text-sm text-red-600">用户名或密码不对，再试一次。</p>}
+          <GeetestCaptcha captchaId={captchaId} />
+
+          {error === "captcha" && (
+            <p className="text-sm text-red-600">请先完成滑块验证。</p>
+          )}
+          {error === "1" && (
+            <p className="text-sm text-red-600">用户名或密码不对，再试一次。</p>
+          )}
 
           <Button type="submit">登录</Button>
         </form>

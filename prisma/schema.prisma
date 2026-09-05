@@ -44,6 +44,12 @@ model Post {
   // @updatedAt = Prisma 在每次 update 时自动刷新这个字段，不用你手写
   updatedAt DateTime @updatedAt
 
+  // 标签：PostgreSQL 的 text[] 数组，Prisma 用 String[] 表示。
+  // 选数组而非独立 Tag 表 + 多对多：个人博客标签是「文章的分类标注」，
+  // 不需要标签的独立生命周期（改名/合并/计数看板），一张表加个数组列最省事。
+  // 真要标签管理页 / 跨文章聚合统计时，再拆 Tag 表不迟。
+  tags String[] @default([])
+
   // 公开列表按 published 过滤 + createdAt 排序，加复合索引让查询走索引而非全表扫
   @@index([published, createdAt])
 }

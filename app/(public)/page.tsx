@@ -1,17 +1,50 @@
 import { Container } from "@/components/Container";
-import { getPublishedPosts } from "@/lib/posts";
+import {
+  getPublishedPosts,
+  getPublishedPostsCount,
+  getAllTags,
+  PAGE_SIZE,
+} from "@/lib/posts";
 import { PostCard } from "@/components/PostCard";
-import { formatDate } from "@/lib/format";
+import { Button } from "@/components/ui/Button";
 import { site } from "@/lib/site";
 import Link from "next/link";
 
 // ISR：列表页静态化，每 60s 再生一次（生产构建时预渲染；dev 下仍每次实时查询）。
 export const revalidate = 60;
 
-// 首页（服务端组件）：Hero 区 + 主列文章网格 + 右侧栏（关于/最近文章）。
-export default async function Home() {
-  const posts = await getPublishedPosts();
-  const [featured, ...rest] = posts;
+// 首页（服务端组件）：Hero + 搜索框 + 主列文章网格 + 侧栏（关于/标签）+ 分页。
+// searchParams 驱动筛选：?tag= 按标签筛、?q= 搜标题、?page= 翻页。
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ tag?: string; q?: string; page?: string }>;
+}) {
+  const sp = await searchParams;
+  const tag = sp.tag?.trim() || undefined;
+  const q = sp.q?.trim() || undefined;
+  const page = Math.max(1, Number(sp.page) || 1);
+
+  const posts = await getPublishedPosts({ tag, q, page });
+  const total = await getPublishedPostsCount({ tag, q });
+  const allTags = await getAllTags();
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const isFiltering = Boolean(tag || q);
+  // 精选大卡只在「纯净首页第一页」显示；筛选/翻页时统一网格，避免结果错位
+  const showFeatured = !isFiltering && page === 1;
+  const featured = showFeatured ? posts[0] : null;
+  const list = showFeatured ? posts.slice(1) : posts;
+
+  // 构造带 tag/q 的链接，翻页/清除时保留筛选条件
+  const pageHref = (n: number) => {
+    const params = new URLSearchParams();
+    if (tag) params.set("tag", tag);
+    if (q) params.set("q", q);
+    if (n > 1) params.set("page", String(n));
+    const s = params.toString();
+    return s ? `/?${s}` : "/";
+  };
 
   return (
     <>
@@ -43,21 +76,48 @@ export default async function Home() {
       </section>
 
       <Container size="wide" className="py-12">
+        {/* 搜索框：GET 提交到当前页，回车或点按钮都能搜 */}
+        <form className="flex gap-2">
+          <input
+            name="q"
+            defaultValue={q}
+            placeholder="搜索文章标题…"
+            className="w-full max-w-xs rounded-md border border-card-border bg-card px-3 py-2 text-sm text-foreground"
+          />
+          {tag && <input type="hidden" name="tag" value={tag} />}
+          <Button type="submit">搜索</Button>
+        </form>
+
+        {isFiltering && (
+          <div className="mt-4 flex items-center gap-2 text-sm text-muted">
+            <span>
+              找到 {total} 篇
+              {tag ? `「${tag}」` : ""}
+              {q ? `含“${q}”` : ""}
+            </span>
+            <Link href="/" className="text-accent hover:underline">
+              清除筛选
+            </Link>
+          </div>
+        )}
+
         {posts.length === 0 ? (
-          <p className="text-muted">还没有文章，去后台写一篇吧。</p>
+          <p className="mt-12 text-muted">没有找到相关文章。</p>
         ) : (
-          <div className="grid gap-8 lg:grid-cols-[1fr_280px]">
-            {/* 主列：首篇精选大卡 + 其余卡片网格，横向铺满，解决“两边空白太多” */}
+          <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_280px]">
+            {/* 主列：首篇精选大卡（仅纯净首页）+ 其余卡片网格 */}
             <main>
               {featured && <PostCard post={featured} featured index={0} />}
-              <div className="mt-6 grid gap-5 sm:grid-cols-2">
-                {rest.map((post, i) => (
+              <div
+                className={`grid gap-5 sm:grid-cols-2 ${featured ? "mt-6" : ""}`}
+              >
+                {list.map((post, i) => (
                   <PostCard key={post.id} post={post} index={i + 1} />
                 ))}
               </div>
             </main>
 
-            {/* 右侧栏：让留白变成有用信息，而非死板空白 */}
+            {/* 右侧栏：关于 + 标签（标签取代原「最近文章」，后者与首页列表重复） */}
             <aside className="space-y-6">
               <div className="rounded-xl border border-card-border bg-card p-5">
                 <h3 className="text-sm font-semibold text-foreground">关于本站</h3>
@@ -72,27 +132,50 @@ export default async function Home() {
                 </a>
               </div>
 
-              {rest.length > 0 && (
+              {allTags.length > 0 && (
                 <div className="rounded-xl border border-card-border bg-card p-5">
-                  <h3 className="text-sm font-semibold text-foreground">最近文章</h3>
-                  <ul className="mt-3 space-y-3">
-                    {rest.slice(0, 5).map((p) => (
-                      <li key={p.id}>
-                        <Link href={`/posts/${p.id}`} className="group block">
-                          <span className="line-clamp-1 text-sm text-foreground transition-colors group-hover:text-accent">
-                            {p.title}
-                          </span>
-                          <span className="text-xs text-muted">
-                            {formatDate(p.createdAt)}
-                          </span>
-                        </Link>
-                      </li>
+                  <h3 className="text-sm font-semibold text-foreground">标签</h3>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {allTags.map(({ name, count }) => (
+                      <Link
+                        key={name}
+                        href={`/?tag=${encodeURIComponent(name)}`}
+                        className={
+                          name === tag
+                            ? "rounded-full bg-accent px-2.5 py-0.5 text-xs font-medium text-accent-foreground"
+                            : "rounded-full border border-card-border px-2.5 py-0.5 text-xs text-muted transition-colors hover:text-accent"
+                        }
+                      >
+                        {name} {count}
+                      </Link>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               )}
             </aside>
           </div>
+        )}
+
+        {totalPages > 1 && (
+          <nav className="mt-10 flex items-center justify-center gap-4 text-sm">
+            {page > 1 ? (
+              <Link href={pageHref(page - 1)} className="text-accent hover:underline">
+                ← 上一页
+              </Link>
+            ) : (
+              <span className="text-muted">← 上一页</span>
+            )}
+            <span className="text-muted">
+              {page} / {totalPages}
+            </span>
+            {page < totalPages ? (
+              <Link href={pageHref(page + 1)} className="text-accent hover:underline">
+                下一页 →
+              </Link>
+            ) : (
+              <span className="text-muted">下一页 →</span>
+            )}
+          </nav>
         )}
       </Container>
     </>

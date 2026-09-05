@@ -275,7 +275,23 @@
 - **教学点**：`sitemap.ts`/`robots.ts` 是 Next 的**约定文件**（放 `app/` 根，自动暴露为对应 URL）；RSS 官方没有约定文件，用 Route Handler（`app/feed.xml/route.ts`）返回 XML。
 - **注意（部署时要改）**：`lib/site.ts` 的 `site.url` 目前是 `http://localhost:3100`，上生产要改成真实域名，否则 sitemap/RSS 里的 URL 都是 localhost。
 - **验证**：`tsc --noEmit` 0 错；实测 `/sitemap.xml` `/robots.txt` `/feed.xml` 均 200 且内容正确（已发布文章全部收录）；访问不存在路由 → HTTP 404 + 中文「页面不存在」。
-- **未做（阶段 4 剩余）**：① 标签分类（需 `Post` 加 `tags` 字段 + 迁移 + 标签页/搜索/分页，动库，待你确认）；② 统一 UI 组件库（Button/Table/Form，收益存疑，YAGNI 暂缓）。
+- **未做（阶段 4 剩余）**：标签分类、UI 组件库 —— 已在 P25 完成。
+
+### P25 · 阶段 4 收尾：标签分类 + UI 组件库
+- **动因**：用户「4阶段全做吧」，把阶段 4 剩余两块（标签分类 + UI 组件库）全部完成。
+- **标签分类（动库）**：
+  - `prisma/schema.prisma`：`Post` 加 `tags String[] @default([])`——选**数组**而非独立 `Tag` 表 + 多对多：个人博客标签是「分类标注」，不需要标签独立生命周期（改名/合并/计数看板），YAGNI。迁移 `20260905131614_add_post_tags`。
+  - `lib/posts.ts`：`getPublishedPosts({ tag, q, page })` 支持标签筛选（`tags: { has }`）、标题搜索（`contains + mode: insensitive`）、分页（`skip/take`）；新增 `getPublishedPostsCount`（总数）、`getAllTags`（内存聚合去重计数）。
+  - 表单：`app/admin/actions.ts` 加 `parseTags()`（中英文逗号分隔→数组）；写/编辑页加「标签（逗号分隔）」输入。
+  - 首页 `app/(public)/page.tsx`：加搜索框（`?q=`）、标签筛选（`?tag=`，侧栏标签区块按计数倒序）、分页（`?page=`）；精选大卡只在「纯净首页第一页」显示，筛选/翻页统一网格。`PostCard` 显示 `#标签` 徽标。
+  - 顺手修复：`getPostsOrdered`（详情页上一篇/下一篇）加 `published: true`，避免导航泄露草稿标题。
+- **UI 组件库**：
+  - 新增 `components/ui/Button.tsx`（primary/outline 两种 pill 变体）——只抽「确实重复」的，危险色删除按钮只有一处不抽。
+  - 新增 `components/ui/Field.tsx`（Field label 容器 + Input + Textarea 共享样式）。
+  - 重构 `login` / `admin/new` / `admin/[postId]/edit` / `admin/page.tsx`（退出登录）复用组件。
+  - **Table 不抽**：后台是 `<ul>` 列表，无表格需求（YAGNI）。
+- **验证**：`tsc --noEmit` 0 错；seed 测试标签后实测：首页标签区块 ✅、`?tag=Next.js` 只出 2 篇 ✅、`?q=Prisma` 只出 1 篇 ✅、`/admin/new` 含 tags 字段 ✅、登录页组件化后正常 ✅。分页因当前仅 4 篇（每页 6）未实际触发，逻辑已 review。
+- **注意**：现有文章标签是测试 seed 的数据（id3=Next.js/部署、id4=Prisma/数据库、id8=Next.js），真实使用请后台自行编辑补标签。
 
 ## 三、待你确认/待办
 - [x] 第一阶段成果已 `git commit` 到本地 `main`（`a5bd1a3`，32 文件）。未 push（需你确认远端与分支策略）。`lib/generated/prisma` 已 gitignore 不进库；`node_modules` 内 junction/package.json 临时改动不进库。

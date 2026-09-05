@@ -32,6 +32,15 @@ function parseId(raw: FormDataEntryValue | null): number {
   return id;
 }
 
+// 表单里的标签是「逗号分隔的字符串」，转成数组存库。中英文逗号都认，去空白去空项。
+function parseTags(raw: FormDataEntryValue | null): string[] {
+  if (typeof raw !== "string") return [];
+  return raw
+    .split(/[,，]/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
+
 export async function createPost(formData: FormData) {
   // 硬闸门：即使有人直接构造 POST 绕过 proxy 拦页面，这里也会再拦一次
   await requireAuth();
@@ -39,12 +48,13 @@ export async function createPost(formData: FormData) {
   const title = (formData.get("title") as string | null)?.trim() ?? "";
   const content = (formData.get("content") as string | null)?.trim() || null;
   const published = formData.get("published") === "on";
+  const tags = parseTags(formData.get("tags"));
 
   if (!title) {
     throw new Error("标题不能为空");
   }
 
-  await repoCreatePost({ title, content, published });
+  await repoCreatePost({ title, content, published, tags });
 
   // 首页是 ISR 静态页，不 revalidate 的话新文章要等最多 60s 再生才出现。
   revalidatePath("/");
@@ -61,10 +71,11 @@ export async function updatePost(formData: FormData) {
   const title = (formData.get("title") as string | null)?.trim() ?? "";
   const content = (formData.get("content") as string | null)?.trim() || null;
   const published = formData.get("published") === "on";
+  const tags = parseTags(formData.get("tags"));
 
   if (!title) throw new Error("标题不能为空");
 
-  await repoUpdatePost(id, { title, content, published });
+  await repoUpdatePost(id, { title, content, published, tags });
 
   // 数据变了，让首页、后台列表、详情页重新生成，否则会看到旧缓存。
   revalidatePath("/");

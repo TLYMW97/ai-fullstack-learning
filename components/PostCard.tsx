@@ -7,6 +7,7 @@ type PostItem = {
   title: string;
   content: string | null;
   published: boolean;
+  tags: string[];
   createdAt: Date;
   updatedAt: Date;
 };
@@ -66,6 +67,20 @@ export function PostCard({
         >
           {excerpt(post.content)}
         </p>
+      )}
+
+      {post.tags.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {post.tags.map((t) => (
+            <Link
+              key={t}
+              href={`/?tag=${encodeURIComponent(t)}`}
+              className="rounded-full border border-card-border bg-card/60 px-2 py-0.5 text-xs text-muted transition-colors hover:text-accent"
+            >
+              #{t}
+            </Link>
+          ))}
+        </div>
       )}
 
       <Link

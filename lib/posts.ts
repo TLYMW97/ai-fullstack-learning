@@ -17,14 +17,66 @@ export type PostInput = {
   title: string;
   content: string | null;
   published: boolean;
+  tags: string[];
 };
 
-/** 公开首页：只取已发布，按创建时间倒序 */
-export function getPublishedPosts() {
+/** 公开列表的筛选条件 */
+export type PostFilter = {
+  tag?: string; // 按标签筛
+  q?: string; // 标题关键词搜索
+  page?: number; // 页码，从 1 开始
+  pageSize?: number; // 每页条数
+};
+
+const PAGE_SIZE = 6;
+export { PAGE_SIZE };
+
+/** 公开首页：只取已发布，支持标签筛选 / 标题搜索 / 分页，按创建时间倒序 */
+export function getPublishedPosts(filter: PostFilter = {}) {
+  const { tag, q, page = 1, pageSize = PAGE_SIZE } = filter;
+
+  const where = {
+    published: true,
+    ...(tag ? { tags: { has: tag } } : {}), // 标量列表的「包含某元素」筛选
+    ...(q ? { title: { contains: q, mode: "insensitive" as const } } : {}),
+  };
+
   return prisma.post.findMany({
-    where: { published: true },
+    where,
     orderBy: { createdAt: "desc" },
+    skip: (page - 1) * pageSize,
+    take: pageSize,
   });
+}
+
+/** 符合筛选条件的已发布文章总数（分页用） */
+export function getPublishedPostsCount(
+  filter: { tag?: string; q?: string } = {},
+) {
+  const { tag, q } = filter;
+  return prisma.post.count({
+    where: {
+      published: true,
+      ...(tag ? { tags: { has: tag } } : {}),
+      ...(q ? { title: { contains: q, mode: "insensitive" as const } } : {}),
+    },
+  });
+}
+
+/** 所有已发布文章的标签（去重 + 计数），按出现次数倒序 */
+export async function getAllTags() {
+  const posts = await prisma.post.findMany({
+    where: { published: true },
+    select: { tags: true },
+  });
+  // ponytail: 个人博客文章量小，直接在内存里聚合标签；要上 SQL 聚合时再说
+  const counts = new Map<string, number>();
+  for (const p of posts) {
+    for (const t of p.tags) counts.set(t, (counts.get(t) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count);
 }
 
 /** 后台：全部文章（含草稿），按创建时间倒序 */
@@ -44,9 +96,12 @@ export function getPostIds() {
   return prisma.post.findMany({ select: { id: true } });
 }
 
-/** 详情页上一篇/下一篇：全部按创建时间倒序 */
+/** 详情页上一篇/下一篇：只取已发布，按创建时间倒序（草稿不该出现在公开导航里） */
 export function getPostsOrdered() {
-  return prisma.post.findMany({ orderBy: { createdAt: "desc" } });
+  return prisma.post.findMany({
+    where: { published: true },
+    orderBy: { createdAt: "desc" },
+  });
 }
 
 export function createPost(input: PostInput) {

@@ -1,6 +1,7 @@
 import { logout } from "./actions";
 import { getAdminPosts } from "@/lib/posts";
 import { DeleteButton } from "./_components/DeleteButton";
+import { Button } from "@/components/ui/Button";
 
 // 后台文章管理页：/admin
 // 列出全部文章（含草稿），每条带「编辑」链接和「删除」按钮。
@@ -24,12 +25,9 @@ export default async function AdminIndex() {
             写文章
           </a>
           <form action={logout}>
-            <button
-              type="submit"
-              className="rounded-full border border-card-border px-5 py-2 text-sm font-medium text-muted transition-colors hover:bg-card"
-            >
+            <Button type="submit" variant="outline" className="text-muted">
               退出登录
-            </button>
+            </Button>
           </form>
         </div>
       </div>

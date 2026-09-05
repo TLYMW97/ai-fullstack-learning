@@ -1,5 +1,7 @@
 import { Container } from "@/components/Container";
 import { login } from "./actions";
+import { Button } from "@/components/ui/Button";
+import { Field, Input } from "@/components/ui/Field";
 
 // 登录页：/login
 // 服务端组件 + Server Action，密码只发到服务端，不经过任何前端状态。
@@ -20,44 +22,31 @@ export default async function LoginPage({
         </p>
 
         <form action={login} className="mt-8 flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <label htmlFor="username" className="text-sm font-medium text-muted">
-              用户名
-            </label>
-            <input
+          <Field label="用户名" htmlFor="username">
+            <Input
               id="username"
               name="username"
               required
               autoFocus
               autoComplete="username"
               placeholder="管理员用户名"
-              className="rounded-md border border-card-border bg-card px-3 py-2 text-foreground"
             />
-          </div>
+          </Field>
 
-          <div className="flex flex-col gap-2">
-            <label htmlFor="password" className="text-sm font-medium text-muted">
-              密码
-            </label>
-            <input
+          <Field label="密码" htmlFor="password">
+            <Input
               id="password"
               name="password"
               type="password"
               required
               autoComplete="current-password"
               placeholder="输入密码"
-              className="rounded-md border border-card-border bg-card px-3 py-2 text-foreground"
             />
-          </div>
+          </Field>
 
           {error && <p className="text-sm text-red-600">用户名或密码不对，再试一次。</p>}
 
-          <button
-            type="submit"
-            className="rounded-full bg-accent px-6 py-2 text-sm font-medium text-accent-foreground transition-opacity hover:opacity-90"
-          >
-            登录
-          </button>
+          <Button type="submit">登录</Button>
         </form>
       </div>
     </Container>

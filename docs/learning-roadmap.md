@@ -94,8 +94,8 @@
 - [x] 公共组件抽象：`Container` / `SiteHeader`（sticky+毛玻璃）/ `SiteFooter` / `ThemeToggle` / `PostCard`；`lib/site.ts` 站点配置、`lib/format.ts` 摘要/阅读时长/日期
 - [x] 首页 Hero + 文章卡片列表（摘要 + 阅读时长 + 已发布/草稿徽标 + hover 抬升）
 - [x] 详情页体验：阅读时长、上一篇/下一篇导航、编辑入口、`prose` 排版 + 统一深色代码块
-- [ ] 统一 UI 组件库补全（Button/Table/Form 等）
-- [ ] 标签分类（需 `Post` 加 `tags` 字段 + 迁移）、标签页 / 搜索；分页与加载态
+- [x] 统一 UI 组件库：抽 `components/ui/Button`（primary/outline）与 `components/ui/Field`（label+Input/Textarea），重构登录/写文章/编辑/后台退出按钮复用；Table 无表格需求不抽（YAGNI，见 P25）
+- [x] 标签分类：`Post` 加 `tags String[]` + 迁移；首页支持 `?tag=` 筛选、`?q=` 标题搜索、`?page=` 分页；侧栏标签区块（按计数倒序）；写/编辑表单加标签输入（逗号分隔）（见 P25）
 - [x] 静态化与 ISR：`app/page.tsx` + `app/posts/[id]/page.tsx` 加 `export const revalidate = 60`，详情页 `generateStaticParams` 预渲染已有文章（`dynamicParams` 默认 true，新文章按需渲染）；dev 下不生效，生产 `next build` 才真正静态化（见 P16）
 - [x] 代码体检与加固：Server Action 变更后 `revalidatePath` 一致性（首页 / 后台 / 详情都要刷）、`Number(formData.get("id"))` 的 NaN 守卫失效（`Number(null)===0`）、动态路由 `Number(id)` 非数字要 `notFound()` 而非 500；后台加 `force-dynamic`、后台页面统一设计令牌（见 P18）
 - [x] 项目结构规范化：路由分组 `(public)`、动态段 `[postId]` 语义化、私有文件夹 `_components/`、分层 import 边界，并对照 Next.js 官网 project-structure 成文（`docs/project-structure.md`，见 P21/P23）

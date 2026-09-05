@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { updatePost } from "../../actions";
 import { getPostById } from "@/lib/posts";
+import { Button } from "@/components/ui/Button";
+import { Field, Input, Textarea } from "@/components/ui/Field";
 
 // 后台必须每次请求都查最新数据：生产构建若被静态化，会看到过期的文章内容。
 export const dynamic = "force-dynamic";
@@ -28,31 +30,22 @@ export default async function EditPostPage({
         {/* 把 id 藏进表单，updatePost 才能知道改的是哪篇 */}
         <input type="hidden" name="id" value={post.id} />
 
-        <div className="flex flex-col gap-2">
-          <label htmlFor="title" className="text-sm font-medium text-muted">
-            标题
-          </label>
-          <input
-            id="title"
-            name="title"
-            required
-            defaultValue={post.title}
-            className="rounded-md border border-card-border bg-card px-3 py-2 text-foreground"
-          />
-        </div>
+        <Field label="标题" htmlFor="title">
+          <Input id="title" name="title" required defaultValue={post.title} />
+        </Field>
 
-        <div className="flex flex-col gap-2">
-          <label htmlFor="content" className="text-sm font-medium text-muted">
-            正文（支持 Markdown）
-          </label>
-          <textarea
+        <Field label="正文（支持 Markdown）" htmlFor="content">
+          <Textarea
             id="content"
             name="content"
             rows={8}
             defaultValue={post.content ?? ""}
-            className="rounded-md border border-card-border bg-card px-3 py-2 text-foreground"
           />
-        </div>
+        </Field>
+
+        <Field label="标签（逗号分隔）" htmlFor="tags">
+          <Input id="tags" name="tags" defaultValue={post.tags.join(", ")} />
+        </Field>
 
         <label className="flex items-center gap-2 text-sm text-muted">
           <input
@@ -63,12 +56,9 @@ export default async function EditPostPage({
           直接发布（不勾就是草稿）
         </label>
 
-        <button
-          type="submit"
-          className="self-start rounded-full bg-accent px-6 py-2 text-sm font-medium text-accent-foreground transition-opacity hover:opacity-90"
-        >
+        <Button type="submit" className="self-start">
           更新
-        </button>
+        </Button>
       </form>
     </main>
   );

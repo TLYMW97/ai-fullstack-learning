@@ -336,6 +336,17 @@
 - **验证**：`tsc --noEmit` 0 错；登录页渲染「账号/验证码」双入口 ✅；直连 QQ SMTP 发测试邮件成功（授权码有效）✅。**完整闭环（发码 → 收邮件 → 输码登录）需用户浏览器实测**。
 - **至此阶段 2 全部完成**：A 密码 + C 极验 + B 邮箱验证码，三种方式全部落地。
 
+### P29 · 首次生产构建验证（`next build` 通过）
+- **动因**：项目至今只在 dev 模式验证过，上线前跑一次 `next build` 验证生产构建。
+- **结果**：**52s 全部通过** —— `Compiled successfully`（32.5s）+ TypeScript 检查（3.4s）+ 静态生成 13/13（5.1s）。
+- **路由表（关键发现）**：
+  - `/posts/9` `/posts/3` `/posts/4` `/posts/8` → **● SSG**：预渲染静态 HTML，`generateStaticParams` 生效，4 篇已发布文章。
+  - `/` → **ƒ Dynamic**：首页从之前的 ISR（`revalidate=60`）变成动态渲染，因为加了 `searchParams`（`?tag`/`?q`/`?page`）——Next 里页面一旦读 searchParams 就强制 dynamic。这是搜索/筛选的必然代价，可接受。
+  - `/admin`、`/admin/[postId]/edit`、`/login`、`/feed.xml` → ƒ Dynamic（force-dynamic / 读 cookies）。
+  - `/robots.txt`、`/sitemap.xml`、`/_not-found`、`/admin/new` → ○ Static。
+- **结论**：代码层面已完全可上线（编译/类型/静态生成全通过）；此前 P16「未跑 build」的顾虑已消除（本次未触发沙箱批量删除保护）。
+- **注意**：首页动态渲染 = 每次请求查库。若将来首页也要静态化，需把搜索/筛选做成客户端（`useSearchParams`）或拆独立路由。
+
 ## 三、待你确认/待办
 - [x] 第一阶段成果已 `git commit` 到本地 `main`（`a5bd1a3`，32 文件）。未 push（需你确认远端与分支策略）。`lib/generated/prisma` 已 gitignore 不进库；`node_modules` 内 junction/package.json 临时改动不进库。
 - [x] 阶段 1 之后（P15–P21）已合并为基线提交 `e440b2b`。未 push。

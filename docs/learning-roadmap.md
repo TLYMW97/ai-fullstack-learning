@@ -99,7 +99,7 @@
 - [x] 静态化与 ISR：`app/page.tsx` + `app/posts/[id]/page.tsx` 加 `export const revalidate = 60`，详情页 `generateStaticParams` 预渲染已有文章（`dynamicParams` 默认 true，新文章按需渲染）；dev 下不生效，生产 `next build` 才真正静态化（见 P16）
 - [x] 代码体检与加固：Server Action 变更后 `revalidatePath` 一致性（首页 / 后台 / 详情都要刷）、`Number(formData.get("id"))` 的 NaN 守卫失效（`Number(null)===0`）、动态路由 `Number(id)` 非数字要 `notFound()` 而非 500；后台加 `force-dynamic`、后台页面统一设计令牌（见 P18）
 - [x] 项目结构规范化：路由分组 `(public)`、动态段 `[postId]` 语义化、私有文件夹 `_components/`、分层 import 边界，并对照 Next.js 官网 project-structure 成文（`docs/project-structure.md`，见 P21/P23）
-- [ ] SEO 收尾：sitemap、RSS、robots、Open Graph（metadata 基础已做）
+- [x] SEO 收尾：`sitemap.xml`（`app/sitemap.ts`）、`robots.txt`（`app/robots.ts`）、RSS（`app/feed.xml/route.ts`）、自定义 404（`app/not-found.tsx`）；Open Graph / metadata 基础已在 P15 做（见 P24）
 
 **参考资料**
 - Tailwind CSS：https://tailwindcss.com/docs

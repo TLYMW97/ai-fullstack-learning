@@ -263,7 +263,19 @@
   3. `docs/project-structure.md` 补「官方约定速查」+ 私有文件夹说明。
 - **踩坑**：组件移进子目录后，其内部相对 import 要从 `./actions` 改 `../actions`（tsc 报 TS2307 才暴露）。
 - **验证**：`tsc --noEmit` 0 错；`/`、`/login` 均 200。
-- **未做（可选增强，按需加）**：`loading.tsx`（骨架屏）、`error.tsx`（错误边界）、`not-found.tsx`（自定义 404）——这些是「加功能」非「结构规范」。其中 `not-found.tsx` 建议做（当前 `notFound()` 弹默认英文 404，体验差）。
+- **未做（可选增强，按需加）**：`loading.tsx`（骨架屏）、`error.tsx`（错误边界）——`not-found.tsx` 已在 P24 做了。
+
+### P24 · 阶段 4 SEO 收尾 + 自定义 404（零依赖）
+- **动因**：进入阶段 4 剩余工作，先做零依赖、上线必备的 SEO 收尾（sitemap / robots / RSS）与体验收尾（自定义 404）。
+- **新增 4 个文件（全是 Next 官方约定文件，零新增依赖）**：
+  - `app/sitemap.ts` → `/sitemap.xml`：首页 + 全部**已发布**文章（草稿不公开也不进 sitemap），每项带 `lastModified`/`changeFrequency`/`priority`。
+  - `app/robots.ts` → `/robots.txt`：允许全站抓取、`Disallow /admin /login`、指向 sitemap。
+  - `app/feed.xml/route.ts` → `/feed.xml`：RSS 2.0 订阅源（Route Handler 手写 XML，不引库；标题/描述做了 XML 转义）。
+  - `app/not-found.tsx` → 自定义 404：中文「页面不存在」+ 返回首页按钮，覆盖 Next 默认英文 404。
+- **教学点**：`sitemap.ts`/`robots.ts` 是 Next 的**约定文件**（放 `app/` 根，自动暴露为对应 URL）；RSS 官方没有约定文件，用 Route Handler（`app/feed.xml/route.ts`）返回 XML。
+- **注意（部署时要改）**：`lib/site.ts` 的 `site.url` 目前是 `http://localhost:3100`，上生产要改成真实域名，否则 sitemap/RSS 里的 URL 都是 localhost。
+- **验证**：`tsc --noEmit` 0 错；实测 `/sitemap.xml` `/robots.txt` `/feed.xml` 均 200 且内容正确（已发布文章全部收录）；访问不存在路由 → HTTP 404 + 中文「页面不存在」。
+- **未做（阶段 4 剩余）**：① 标签分类（需 `Post` 加 `tags` 字段 + 迁移 + 标签页/搜索/分页，动库，待你确认）；② 统一 UI 组件库（Button/Table/Form，收益存疑，YAGNI 暂缓）。
 
 ## 三、待你确认/待办
 - [x] 第一阶段成果已 `git commit` 到本地 `main`（`a5bd1a3`，32 文件）。未 push（需你确认远端与分支策略）。`lib/generated/prisma` 已 gitignore 不进库；`node_modules` 内 junction/package.json 临时改动不进库。

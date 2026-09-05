@@ -30,6 +30,9 @@ yarn-error.log*
 pnpm-debug.log*
 *.log
 
+# 编辑器（Markdown Preview Enhanced 等）导出的 HTML 预览，非源码、会过期
+docs/progress-log.html
+
 # 系统文件
 .DS_Store
 Thumbs.db

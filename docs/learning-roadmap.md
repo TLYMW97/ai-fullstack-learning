@@ -48,16 +48,17 @@
 
 ---
 
-## 阶段 2 · 后台管理系统与登录 🔐
+## 阶段 2 · 后台管理系统与登录 🔐 🟡（方案 A：密码+Cookie 会话已落地；邮箱/极验待扩展）
 
 **掌握内容**：会话与鉴权模型（Cookie/Session/JWT）；第三方验证（极验 GeeTest 人机校验）；邮箱验证码登录；受保护路由；管理后台 UI。
 
 **关键任务**
-- [ ] 鉴权方案：Auth.js（NextAuth）或自建 Session（推荐先理解原理，再上库）
-- [ ] 接入**极验 GeeTest**：前端滑块校验 + 后端二次校验
-- [ ] **邮箱验证码登录**：发码（SMTP / 邮件服务）→ 校验 → 签发会话
-- [ ] 受保护的管理后台：`/admin` 下仪表盘、文章管理表格（增删改查）、富文本编辑器
-- [ ] 登录态中间件（`middleware.ts` → Next 16 为 `proxy.ts`）
+- [x] 鉴权方案：自建 Session（密码 + Cookie 会话，纯 `node:crypto`，零外部依赖，见 P19）。Auth.js（NextAuth）作为后续备选，本阶段不引入以保持最小依赖
+- [ ] 接入**极验 GeeTest**：前端滑块校验 + 后端二次校验 —— 待你提供 GeeTest `captchaId`+`captchaKey`
+- [ ] **邮箱验证码登录**：发码（SMTP / 邮件服务）→ 校验 → 签发会话 —— 待你提供 SMTP 授权码或 Resend Key
+- [x] 受保护的管理后台：`/admin` 下文章管理表格（增删改查、**删除二次确认弹窗**、**公开列表隐藏草稿**；方案 A 已加 `proxy.ts` 路由保护 + 写操作 `requireAuth()` 硬闸门，见 P19/P20）
+- [ ] 后台富文本编辑器（Markdown 编辑增强 / 所见即所得）—— 待定
+- [x] 登录态中间件（Next 16 由 `middleware.ts` 改名为 `proxy.ts`）：未登录访问 `/admin/*` 一律 307 跳 `/login`（见 P19）
 
 **参考资料**
 - Auth.js（NextAuth）：https://authjs.dev/getting-started
@@ -84,15 +85,20 @@
 
 ---
 
-## 阶段 4 · 前端体验与工程化 🎨
+## 阶段 4 · 前端体验与工程化 🎨 🟡（期1+期2 已落地，SSG/ISR 已落地，视觉升级已落地，代码体检修复已落地；组件库补全/标签分类/SEO 收尾待做）
 
 **掌握内容**：Tailwind 工程化与组件抽象；列表分页/搜索/标签；静态生成（SSG）/增量再生（ISR）取舍；响应式与主题。
 
 **关键任务**
-- [ ] 统一 UI 组件库（Button/Card/Table/Form）
-- [ ] 首页 / 标签页 / 搜索；分页与加载态
-- [ ] 静态化与 ISR：内容站用 SSG 提速、降数据库压力
-- [ ] SEO 收尾：sitemap、RSS、robots、Open Graph
+- [x] 设计系统地基：Tailwind v4 `@theme inline` 设计令牌（中性色 ramp + violet 强调色 + 容器宽度）、`.dark` class 暗色（非系统媒体查询）、Geist + 中文回退字体、无闪烁主题切换（内联脚本 + 客户端按钮，**零新增依赖**）（见 P15）
+- [x] 公共组件抽象：`Container` / `SiteHeader`（sticky+毛玻璃）/ `SiteFooter` / `ThemeToggle` / `PostCard`；`lib/site.ts` 站点配置、`lib/format.ts` 摘要/阅读时长/日期
+- [x] 首页 Hero + 文章卡片列表（摘要 + 阅读时长 + 已发布/草稿徽标 + hover 抬升）
+- [x] 详情页体验：阅读时长、上一篇/下一篇导航、编辑入口、`prose` 排版 + 统一深色代码块
+- [ ] 统一 UI 组件库补全（Button/Table/Form 等）
+- [ ] 标签分类（需 `Post` 加 `tags` 字段 + 迁移）、标签页 / 搜索；分页与加载态
+- [x] 静态化与 ISR：`app/page.tsx` + `app/posts/[id]/page.tsx` 加 `export const revalidate = 60`，详情页 `generateStaticParams` 预渲染已有文章（`dynamicParams` 默认 true，新文章按需渲染）；dev 下不生效，生产 `next build` 才真正静态化（见 P16）
+- [x] 代码体检与加固：Server Action 变更后 `revalidatePath` 一致性（首页 / 后台 / 详情都要刷）、`Number(formData.get("id"))` 的 NaN 守卫失效（`Number(null)===0`）、动态路由 `Number(id)` 非数字要 `notFound()` 而非 500；后台加 `force-dynamic`、后台页面统一设计令牌（见 P18）
+- [ ] SEO 收尾：sitemap、RSS、robots、Open Graph（metadata 基础已做）
 
 **参考资料**
 - Tailwind CSS：https://tailwindcss.com/docs

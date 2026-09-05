@@ -6,7 +6,11 @@ import { PrismaClient } from "@/lib/generated/prisma/client";
 // 任何地方要查数据，都 `import { prisma } from "@/lib/db"`，不要自己 new。
 // ---------------------------------------------------------------------------
 
-const connectionString = process.env.DATABASE_URL!;
+// 缺环境变量时给一句人能看懂的报错，而不是让 adapter 拿着 undefined 去连库。
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  throw new Error("DATABASE_URL 未设置：请检查项目根目录的 .env");
+}
 
 function createPrismaClient() {
   // Prisma 7 的变化：客户端不再自带数据库驱动，必须显式传一个 adapter。

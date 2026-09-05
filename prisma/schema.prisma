@@ -44,4 +44,7 @@ model Post {
 
   // @updatedAt = Prisma 在每次 update 时自动刷新这个字段，不用你手写
   updatedAt DateTime @updatedAt
+
+  // 公开列表按 published 过滤 + createdAt 排序，加复合索引让查询走索引而非全表扫
+  @@index([published, createdAt])
 }

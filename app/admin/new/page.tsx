@@ -1,7 +1,7 @@
 import { createPost } from "../actions";
 import { Button } from "@/components/ui/Button";
-import { Field, Input, Textarea } from "@/components/ui/Field";
-import { ImageUploader } from "../_components/ImageUploader";
+import { Field, Input } from "@/components/ui/Field";
+import { MarkdownEditor } from "../_components/MarkdownEditor";
 
 // 写文章页面（后台）。
 // 服务端组件，直接把 Server Action 作为 <form> 的 action 属性传入，
@@ -19,13 +19,8 @@ export default function NewPostPage() {
         </Field>
 
         <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <label htmlFor="content" className="text-sm font-medium text-muted">
-              正文（支持 Markdown）
-            </label>
-            <ImageUploader />
-          </div>
-          <Textarea id="content" name="content" rows={8} placeholder="用 Markdown 写正文" />
+          <span className="text-sm font-medium text-muted">正文（支持 Markdown）</span>
+          <MarkdownEditor />
         </div>
 
         <Field label="标签（逗号分隔）" htmlFor="tags">

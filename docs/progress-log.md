@@ -372,6 +372,16 @@
 - **✅ 已处理（用户改权限后）**：Bucket 权限改为「公有读私有写」，上传的图片 URL 直接访问从 **403 → 200**（测试文件 `test/hello-*.txt` 可公开读取），图片能在网页正常显示。阶段 3 上传链路彻底闭环。
 - **未做（方案 B 进阶，待你定）**：前端直传 + STS 临时密钥、CDN 域名加速、缩略图（数据万象）。
 
+### P32 · 补全阶段 2/3 剩余：Markdown 实时预览
+- **动因**：用户「阶段二、阶段三不需要备案的部分都补全」，梳理后唯一值得补的是富文本编辑器（方案 B 前端直传 STS、缩略图判定 YAGNI 不做，见下）。
+- **改动**：
+  - **新增** `app/admin/_components/MarkdownEditor.tsx`（客户端）：受控 textarea + 「编辑/预览」切换 + 内嵌「上传图片」按钮，复用 react-markdown 实时预览（**零新依赖**）。预览态用 hidden input 兜住 `name="content"`，保证表单提交不丢内容。
+  - `app/admin/new` + `[postId]/edit`：正文改用 `MarkdownEditor`；删除旧 `ImageUploader.tsx`（上传逻辑整合进 MarkdownEditor，改用回调更新 state 而非直接操作 DOM）。
+- **为什么不做所见即所得（TipTap 等）**：个人博客站长自己写 Markdown，纯 Markdown + 实时预览已够用，引富文本编辑器是大依赖 + 复杂度（YAGNI）。
+- **为什么不做方案 B 前端直传 STS / 缩略图**：个人博客图片量小，后端中转（方案 A）带宽可忽略；STS 直传是「过度优化」；缩略图原图显示即可。均 YAGNI。
+- **验证**：`tsc --noEmit` 0 错；`/admin/new` 200 且渲染「编辑/预览/上传图片」三元素 ✅。
+- **至此阶段 2、阶段 3 不需备案的部分全部补全**；剩余均卡在备案/域名（CDN）或外部服务。
+
 ## 三、待你确认/待办
 - [x] 第一阶段成果已 `git commit` 到本地 `main`（`a5bd1a3`，32 文件）。未 push（需你确认远端与分支策略）。`lib/generated/prisma` 已 gitignore 不进库；`node_modules` 内 junction/package.json 临时改动不进库。
 - [x] 阶段 1 之后（P15–P21）已合并为基线提交 `e440b2b`。未 push。

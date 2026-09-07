@@ -57,7 +57,7 @@
 - [x] 接入**极验 GeeTest v4**：前端滑块（`app/login/_components/GeetestCaptcha.tsx` 加载 gt4.js）+ 后端二次校验（`lib/geetest.ts` 用 `node:crypto` HMAC-SHA256 手写 sign_token 调 validate，零新增依赖，见 P26）
 - [x] **邮箱验证码登录**：发码（QQ 邮箱 SMTP + nodemailer）→ 5 分钟过期校验 → 签发会话；登录页「账号/验证码」双入口（见 P28）
 - [x] 受保护的管理后台：`/admin` 下文章管理表格（增删改查、**删除二次确认弹窗**、**公开列表隐藏草稿**；方案 A 已加 `proxy.ts` 路由保护 + 写操作 `requireAuth()` 硬闸门，见 P19/P20）
-- [ ] 后台富文本编辑器（Markdown 编辑增强 / 所见即所得）—— 待定
+- [x] 后台富文本编辑器：用轻量「Markdown 实时预览」实现（`app/admin/_components/MarkdownEditor.tsx`，编辑/预览切换 + 内嵌图片上传，复用 react-markdown 零新依赖），不引所见即所得重库（YAGNI，见 P32）
 - [x] 登录态中间件（Next 16 由 `middleware.ts` 改名为 `proxy.ts`）：未登录访问 `/admin/*` 一律 307 跳 `/login`（见 P19）
 
 **参考资料**

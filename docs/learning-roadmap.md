@@ -76,7 +76,7 @@
 - [x] **方案 A 后端中转上传**：写/编辑文章页「上传图片」按钮 → Server Action 中转 → COS putObject → 返回 URL 插入 Markdown（见 P31）
 - [ ] 后端签发临时密钥（STS）或上传签名 —— 方案 B 前端直传的前提
 - [ ] 前端直传 COS + 上传进度/失败重试 —— 方案 B 进阶
-- [ ] 富文本里的图片走 CDN 域名（当前直连 COS 域名）
+- [x] 富文本图片 CDN 接入预留：`lib/cos.ts` 支持 `COS_CDN_DOMAIN` 切换（配了走 CDN、没配直连 COS）；待有备案域名后配 CDN + CNAME 即可启用，不改代码
 - [ ] 缩略图 / 图片处理（COS 数据万象 或 CDN 图像处理）
 
 **参考资料**

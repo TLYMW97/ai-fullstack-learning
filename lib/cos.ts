@@ -40,6 +40,11 @@ export async function uploadImage(
     );
   });
 
-  // 虚拟主机风格访问域名（2024 年后新建的桶不支持 path-style）
-  return `https://${bucket}.cos.${region}.myqcloud.com/${key}`;
+  // 返回可访问 URL：优先走 CDN 域名（.env 配了 COS_CDN_DOMAIN 才生效），
+  // 否则直连 COS 的虚拟主机风格域名（2024 年后新建的桶不支持 path-style）。
+  // CDN 接入预留：以后配好 CDN + CNAME，只需在 .env 填 COS_CDN_DOMAIN，不用改代码。
+  const cdnDomain = process.env.COS_CDN_DOMAIN;
+  return cdnDomain
+    ? `https://${cdnDomain}/${key}`
+    : `https://${bucket}.cos.${region}.myqcloud.com/${key}`;
 }

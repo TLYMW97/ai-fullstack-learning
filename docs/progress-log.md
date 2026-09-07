@@ -355,6 +355,23 @@
 - **后续修复（同日）**：改 float 后出现「两个点击按钮开始验证」——React StrictMode 开发模式下 `useEffect` 执行两次，cleanup 只 `script.remove()` 没销毁已渲染的极验实例，第二次挂载又 appendTo 一个按钮。修复：cleanup 里 `captchaObj.destroy()` + 清空 `#geetest-captcha` 容器。
 - **再修复（同日）**：登录校验失败后滑块不重置、无法再次验证。根因：极验验证成功后状态残留，需要 `reset()` 回到初始状态；整页 form 提交 + redirect 回来时组件复用旧实例。修复：`gt4.js` 用模块级单例只加载一次，但每次挂载新建 captcha 实例；外层 `key={error}` 让登录失败（error 变化）时强制重挂载 → 全新实例 → 初始状态；cleanup 里 destroy 本实例。
 
+### P31 · 阶段 3 文件上传：腾讯云 COS（方案 A 后端中转）
+- **动因**：用户提供 COS SecretId/SecretKey/Bucket/Region，接入图片上传（阶段 3，方案 A 后端中转）。
+- **改动文件**：
+  - `.env`：加 `COS_SECRET_ID` / `COS_SECRET_KEY` / `COS_BUCKET` / `COS_REGION`（gitignore 不入库）。
+  - **新增** `lib/cos.ts`：`uploadImage(filename, buffer)` 用 COS SDK `putObject` 上传，对象键按日期分目录 + 随机名，返回虚拟主机风格 URL。
+  - `app/admin/actions.ts`：加 `uploadImage` Server Action（requireAuth + 校验图片类型/大小 ≤10MB + 中转上传）。
+  - **新增** `app/admin/_components/ImageUploader.tsx`（客户端）：选图 → 调 uploadImage → 把 `![名](url)` 追加进正文 textarea。
+  - `app/admin/new` + `[postId]/edit`：正文字段加「上传图片」按钮。
+  - `next.config.ts`：`serverActions.bodySizeLimit = "10mb"`（默认 1MB 不够）+ `serverExternalPackages = ["cos-nodejs-sdk-v5"]`。
+- **踩坑（P12 复发 + 新坑）**：
+  1. **沙箱软链空壳**：COS SDK 带 43 个依赖，大量软链被弄空壳，`next dev` 报 `Can't resolve 'es-define-property'/'jsbn'/'safer-buffer'` 等。修法：junction 批量重指（`.workbuddy/fix_shells.cjs`，共修 65 个）。
+  2. **Turbopack + junction 不兼容**：junction 修好后 Node `require` 能过（脚本上传成功），但 Turbopack 打包仍报 Can't resolve。修法：`serverExternalPackages` 把 COS SDK 标记为外部包，不打包依赖树，运行时 Node 直接 require。
+  3. `serverActions` 配置在 Next 16 仍在 `experimental` 下（顶层写会 TS 报错）。
+- **验证**：`tsc --noEmit` 0 错；脚本直传测试文件到 COS **成功**（密钥有效）；`/admin/new` 200 且渲染「上传图片」按钮 ✅。
+- **⚠️ 待你处理（关键）**：Bucket 是**私有读写**，上传后图片 URL 直接访问返回 **403**。图片要在网页显示，需把 Bucket 权限改成「**公有读私有写**」（控制台 → 存储桶 → 权限管理 → 存储桶访问权限），否则前端 `<img>` 加载不出图片。
+- **未做（方案 B 进阶，待你定）**：前端直传 + STS 临时密钥、CDN 域名加速、缩略图（数据万象）。
+
 ## 三、待你确认/待办
 - [x] 第一阶段成果已 `git commit` 到本地 `main`（`a5bd1a3`，32 文件）。未 push（需你确认远端与分支策略）。`lib/generated/prisma` 已 gitignore 不进库；`node_modules` 内 junction/package.json 临时改动不进库。
 - [x] 阶段 1 之后（P15–P21）已合并为基线提交 `e440b2b`。未 push。

@@ -17,6 +17,7 @@ import {
   updatePost as repoUpdatePost,
   deletePost as repoDeletePost,
 } from "@/lib/posts";
+import { uploadImage as cosUploadImage } from "@/lib/cos";
 
 // 从表单里取文章 id。
 // ponytail: formData.get 拿到 null / 空串时 Number(null)===0、Number("")===0，
@@ -102,4 +103,25 @@ export async function deletePost(formData: FormData) {
 export async function logout() {
   await endSession();
   redirect("/login");
+}
+
+// 上传图片到腾讯云 COS（阶段 3 方案 A：后端中转）。
+// 返回 { ok: true, url } 或 { ok: false, error }，不 redirect（由客户端组件调用）。
+export async function uploadImage(formData: FormData) {
+  await requireAuth();
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return { ok: false as const, error: "没有收到文件" };
+  }
+  if (!file.type.startsWith("image/")) {
+    return { ok: false as const, error: "只能上传图片" };
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    return { ok: false as const, error: "图片不能超过 10MB" };
+  }
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const url = await cosUploadImage(file.name, buffer);
+  return { ok: true as const, url };
 }

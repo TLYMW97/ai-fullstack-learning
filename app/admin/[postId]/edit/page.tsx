@@ -3,6 +3,7 @@ import { updatePost } from "../../actions";
 import { getPostById } from "@/lib/posts";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Textarea } from "@/components/ui/Field";
+import { ImageUploader } from "../../_components/ImageUploader";
 
 // 后台必须每次请求都查最新数据：生产构建若被静态化，会看到过期的文章内容。
 export const dynamic = "force-dynamic";
@@ -34,14 +35,20 @@ export default async function EditPostPage({
           <Input id="title" name="title" required defaultValue={post.title} />
         </Field>
 
-        <Field label="正文（支持 Markdown）" htmlFor="content">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <label htmlFor="content" className="text-sm font-medium text-muted">
+              正文（支持 Markdown）
+            </label>
+            <ImageUploader />
+          </div>
           <Textarea
             id="content"
             name="content"
             rows={8}
             defaultValue={post.content ?? ""}
           />
-        </Field>
+        </div>
 
         <Field label="标签（逗号分隔）" htmlFor="tags">
           <Input id="tags" name="tags" defaultValue={post.tags.join(", ")} />

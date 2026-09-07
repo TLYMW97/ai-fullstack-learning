@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react";
 
 // 极验滑块：客户端组件。用户滑完验证成功后，把四个参数写成 hidden input，
-// 随外层 <form action={login}> 一起提交给后端做二次校验。
+// 随外层表单一起提交给后端做二次校验。
 //
-// 关键：gt4.js 加载 + initGeetest4 放到【模块级单例】只执行一次。
-// 之前放在 useEffect 里，React StrictMode 开发模式会让 effect 双执行，
-// script 被创建两次、initGeetest4 被调两次、appendTo 两次 → 页面上两个按钮。
-// 模块级单例 + effect 里的 cancelled 标志，保证 appendTo 只执行一次。
+// 关键设计：
+// 1. gt4.js 用模块级单例只加载一次（避免 StrictMode 双执行 / 重挂载时 script 重复加载）。
+// 2. 每次挂载都【新建 captcha 实例】（不复用），配合外层 key 变化，登录失败回来时
+//    强制重挂载 → 全新实例 → 验证回到初始状态（等价于极验的 reset()）。
+// 3. cleanup 里 destroy 本次创建的实例，避免残留。
 type ValidateResult = {
   lot_number: string;
   captcha_output: string;
@@ -16,25 +17,24 @@ type ValidateResult = {
   gen_time: string;
 };
 
-let captchaPromise: Promise<CaptchaHandle> | null = null;
+type InitFn = (cfg: object, cb: (c: CaptchaHandle) => void) => void;
 
-function loadCaptcha(captchaId: string): Promise<CaptchaHandle> {
-  if (captchaPromise) return captchaPromise;
-  captchaPromise = new Promise((resolve) => {
+let initPromise: Promise<InitFn> | null = null;
+
+function loadInit(): Promise<InitFn> {
+  if (initPromise) return initPromise;
+  initPromise = new Promise((resolve) => {
     const script = document.createElement("script");
     script.src = "https://static.geetest.com/v4/gt4.js";
     script.async = true;
     script.onload = () => {
       const init = (window as unknown as { initGeetest4?: unknown }).initGeetest4;
-      if (typeof init !== "function") return;
-      (init as (cfg: object, cb: (c: CaptchaHandle) => void) => void)(
-        { captchaId, product: "float" },
-        (captcha: CaptchaHandle) => resolve(captcha),
-      );
+      resolve(typeof init === "function" ? (init as InitFn) : (() => {}));
     };
+    script.onerror = () => resolve(() => {});
     document.body.appendChild(script);
   });
-  return captchaPromise;
+  return initPromise;
 }
 
 export function GeetestCaptcha({ captchaId }: { captchaId: string }) {
@@ -43,22 +43,31 @@ export function GeetestCaptcha({ captchaId }: { captchaId: string }) {
 
   useEffect(() => {
     let cancelled = false;
+    let localCaptcha: CaptchaHandle | null = null;
 
-    loadCaptcha(captchaId).then((captcha) => {
-      if (cancelled) return; // StrictMode 第一次挂载的 effect 已被取消，跳过
-      const box = document.getElementById("geetest-captcha");
-      if (box) box.innerHTML = ""; // 清空容器，防重复 appendTo 累积
-      captcha.appendTo("#geetest-captcha");
-      captcha.onSuccess(() => {
-        setResult(captcha.getValidate());
-      });
-      captcha.onError(() => {
-        setError("验证码加载失败，请刷新重试");
+    loadInit().then((init) => {
+      if (cancelled) return;
+      init({ captchaId, product: "float" }, (captcha: CaptchaHandle) => {
+        if (cancelled) return;
+        localCaptcha = captcha;
+        const box = document.getElementById("geetest-captcha");
+        if (box) box.innerHTML = ""; // 清空，防累积
+        captcha.appendTo("#geetest-captcha");
+        captcha.onSuccess(() => {
+          setResult(captcha.getValidate());
+        });
+        captcha.onError(() => {
+          setError("验证码加载失败，请刷新重试");
+        });
       });
     });
 
     return () => {
       cancelled = true;
+      // 销毁本实例，避免重挂载（StrictMode / key 变化）后残留旧按钮
+      localCaptcha?.destroy?.();
+      const box = document.getElementById("geetest-captcha");
+      if (box) box.innerHTML = "";
     };
   }, [captchaId]);
 
@@ -84,4 +93,5 @@ type CaptchaHandle = {
   onSuccess: (cb: () => void) => void;
   onError: (cb: () => void) => void;
   getValidate: () => ValidateResult;
+  destroy: () => void;
 };

@@ -353,6 +353,7 @@
 - **修复**：`app/login/_components/GeetestCaptcha.tsx` 把 `product` 改为 `"float"`（官方默认，appendTo 有效，点击按钮弹出验证）；顺手加 `onError` 回调 + 错误提示（加载失败不再静默）。
 - **教训**：接第三方 SDK 先读官方 API 文档的参数语义，别照抄二手文章示例——formblade 文档里 `product: 'bind'` 是「绑定按钮、点提交才触发」的场景，和「页面直接嵌滑块」不同。
 - **后续修复（同日）**：改 float 后出现「两个点击按钮开始验证」——React StrictMode 开发模式下 `useEffect` 执行两次，cleanup 只 `script.remove()` 没销毁已渲染的极验实例，第二次挂载又 appendTo 一个按钮。修复：cleanup 里 `captchaObj.destroy()` + 清空 `#geetest-captcha` 容器。
+- **再修复（同日）**：登录校验失败后滑块不重置、无法再次验证。根因：极验验证成功后状态残留，需要 `reset()` 回到初始状态；整页 form 提交 + redirect 回来时组件复用旧实例。修复：`gt4.js` 用模块级单例只加载一次，但每次挂载新建 captcha 实例；外层 `key={error}` 让登录失败（error 变化）时强制重挂载 → 全新实例 → 初始状态；cleanup 里 destroy 本实例。
 
 ## 三、待你确认/待办
 - [x] 第一阶段成果已 `git commit` 到本地 `main`（`a5bd1a3`，32 文件）。未 push（需你确认远端与分支策略）。`lib/generated/prisma` 已 gitignore 不进库；`node_modules` 内 junction/package.json 临时改动不进库。

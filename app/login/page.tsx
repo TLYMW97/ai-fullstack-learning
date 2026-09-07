@@ -74,7 +74,8 @@ export default async function LoginPage({
               />
             </Field>
 
-            <GeetestCaptcha captchaId={captchaId} />
+            {/* key={error}：登录失败回来（error 变化）时强制重挂载滑块，让它回到初始状态可重新验证 */}
+            <GeetestCaptcha key={error ?? "none"} captchaId={captchaId} />
 
             {error === "captcha" && (
               <p className="text-sm text-red-600">请先完成滑块验证。</p>

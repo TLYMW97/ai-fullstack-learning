@@ -369,7 +369,7 @@
   2. **Turbopack + junction 不兼容**：junction 修好后 Node `require` 能过（脚本上传成功），但 Turbopack 打包仍报 Can't resolve。修法：`serverExternalPackages` 把 COS SDK 标记为外部包，不打包依赖树，运行时 Node 直接 require。
   3. `serverActions` 配置在 Next 16 仍在 `experimental` 下（顶层写会 TS 报错）。
 - **验证**：`tsc --noEmit` 0 错；脚本直传测试文件到 COS **成功**（密钥有效）；`/admin/new` 200 且渲染「上传图片」按钮 ✅。
-- **⚠️ 待你处理（关键）**：Bucket 是**私有读写**，上传后图片 URL 直接访问返回 **403**。图片要在网页显示，需把 Bucket 权限改成「**公有读私有写**」（控制台 → 存储桶 → 权限管理 → 存储桶访问权限），否则前端 `<img>` 加载不出图片。
+- **✅ 已处理（用户改权限后）**：Bucket 权限改为「公有读私有写」，上传的图片 URL 直接访问从 **403 → 200**（测试文件 `test/hello-*.txt` 可公开读取），图片能在网页正常显示。阶段 3 上传链路彻底闭环。
 - **未做（方案 B 进阶，待你定）**：前端直传 + STS 临时密钥、CDN 域名加速、缩略图（数据万象）。
 
 ## 三、待你确认/待办

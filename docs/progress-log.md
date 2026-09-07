@@ -352,6 +352,7 @@
 - **根因**：极验 v4 的 `product: "bind"` 模式下 **`appendTo` 接口无效**，必须手动调 `showCaptcha()` 才显示验证。之前代码 `{ product: "bind" }` 却调 `captcha.appendTo("#geetest-captcha")`，导致验证按钮根本不渲染。
 - **修复**：`app/login/_components/GeetestCaptcha.tsx` 把 `product` 改为 `"float"`（官方默认，appendTo 有效，点击按钮弹出验证）；顺手加 `onError` 回调 + 错误提示（加载失败不再静默）。
 - **教训**：接第三方 SDK 先读官方 API 文档的参数语义，别照抄二手文章示例——formblade 文档里 `product: 'bind'` 是「绑定按钮、点提交才触发」的场景，和「页面直接嵌滑块」不同。
+- **后续修复（同日）**：改 float 后出现「两个点击按钮开始验证」——React StrictMode 开发模式下 `useEffect` 执行两次，cleanup 只 `script.remove()` 没销毁已渲染的极验实例，第二次挂载又 appendTo 一个按钮。修复：cleanup 里 `captchaObj.destroy()` + 清空 `#geetest-captcha` 容器。
 
 ## 三、待你确认/待办
 - [x] 第一阶段成果已 `git commit` 到本地 `main`（`a5bd1a3`，32 文件）。未 push（需你确认远端与分支策略）。`lib/generated/prisma` 已 gitignore 不进库；`node_modules` 内 junction/package.json 临时改动不进库。

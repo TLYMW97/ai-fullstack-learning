@@ -390,7 +390,7 @@
   2. **解法**：`output: "standalone"` + 服务器上补 `npm install @prisma/client@7.10.0 @prisma/adapter-pg@7.10.0 pg`（standalone 的依赖追踪收不到 Prisma 动态 require 的包，只能手动补）。
   3. 沙箱软链接空壳（P12）复发：standalone 的 node_modules 全空壳，junction 重指 + `tar -h`（dereference）打包真实内容。
 - **验证**：本地 `node server.js` 200；服务器 `/` `/login` 200；Nginx 内网 80 200。
-- **待办**：① 开放阿里云安全组 80 端口（公网访问最后一关）；② 域名 + 备案 + HTTPS（试用服务器不支持备案，需买正式服务器）；③ 数据库备份策略（pg_dump 定时）。
+- **待办**：① 开放阿里云安全组 80 端口（公网访问最后一关）；② 域名 + 备案 + HTTPS（试用服务器不支持备案，需买正式服务器）；③ ~~数据库备份策略~~ ✅ 已做（`/root/backup.sh` pg_dump + cron 每天 3 点，保留 7 天）。
 
 ## 三、待你确认/待办
 - [x] 第一阶段成果已 `git commit` 到本地 `main`（`a5bd1a3`，32 文件）。未 push（需你确认远端与分支策略）。`lib/generated/prisma` 已 gitignore 不进库；`node_modules` 内 junction/package.json 临时改动不进库。

@@ -1,9 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // 把 COS SDK 标记为服务端外部包：Turbopack 不打包它的依赖树，
-  // 运行时由 Node 直接 require（COS SDK 有一大串 CJS 依赖，且沙箱里
-  // junction + Turbopack 解析不兼容，Node require 反而能正常过）。
+  // 自包含构建：生成 .next/standalone（含精简 node_modules，与 build 时版本一致）。
+  output: "standalone",
+
+  // 服务端外部包（运行时 require，不打包）：仅 cos-nodejs-sdk-v5 需要
+  // （CJS 依赖树 + 沙箱 junction 解析不兼容，P31）。
   serverExternalPackages: ["cos-nodejs-sdk-v5"],
 
   experimental: {

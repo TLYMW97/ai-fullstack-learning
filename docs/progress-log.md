@@ -382,6 +382,16 @@
 - **验证**：`tsc --noEmit` 0 错；`/admin/new` 200 且渲染「编辑/预览/上传图片」三元素 ✅。
 - **至此阶段 2、阶段 3 不需备案的部分全部补全**；剩余均卡在备案/域名（CDN）或外部服务。
 
+### P33 · 阶段 5 部署上线（阿里云 2核2G，IP 直连）
+- **环境**：阿里云试用 2核2G，公网 IP `8.136.107.136`，Ubuntu 22.04.5 LTS；加 2GB swap；Node 22（NodeSource）；PostgreSQL 14（阿里云内网源，pgdg 装 17 太慢放弃）；Nginx 反代 80→3000；PM2 守护 + 开机自启。
+- **部署方式**：本地 `next build`（`output: "standalone"`）→ 打包上传 → 服务器跑 `server.js`。2GB 内存不够 `next build`，故构建在本地（CI/CD 同理）。
+- **踩坑（Turbopack + Prisma 7 跨机器部署，重要教训）**：
+  1. Turbopack 给 `@prisma/client`/`pg` 生成带 content hash 的 external 引用（`@prisma/client-xxxx`、`pg-xxxx`），本地 build 传到服务器后 hash 与服务器 node_modules 不匹配 → 500 `Cannot find module`。`serverExternalPackages`、`transpilePackages` 都无效（Prisma 7 的 runtime 是动态 require，Turbopack 只能 external）。
+  2. **解法**：`output: "standalone"` + 服务器上补 `npm install @prisma/client@7.10.0 @prisma/adapter-pg@7.10.0 pg`（standalone 的依赖追踪收不到 Prisma 动态 require 的包，只能手动补）。
+  3. 沙箱软链接空壳（P12）复发：standalone 的 node_modules 全空壳，junction 重指 + `tar -h`（dereference）打包真实内容。
+- **验证**：本地 `node server.js` 200；服务器 `/` `/login` 200；Nginx 内网 80 200。
+- **待办**：① 开放阿里云安全组 80 端口（公网访问最后一关）；② 域名 + 备案 + HTTPS（试用服务器不支持备案，需买正式服务器）；③ 数据库备份策略（pg_dump 定时）。
+
 ## 三、待你确认/待办
 - [x] 第一阶段成果已 `git commit` 到本地 `main`（`a5bd1a3`，32 文件）。未 push（需你确认远端与分支策略）。`lib/generated/prisma` 已 gitignore 不进库；`node_modules` 内 junction/package.json 临时改动不进库。
 - [x] 阶段 1 之后（P15–P21）已合并为基线提交 `e440b2b`。未 push。

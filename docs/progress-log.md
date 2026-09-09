@@ -393,6 +393,13 @@
 - **待办**：① ~~开放阿里云安全组 80 端口~~ ✅ 已开（2026-09-09，公网 `http://8.136.107.136` 访问成功，首页/登录/详情/sitemap 全 200）；② 域名 + 备案 + HTTPS（试用服务器不支持备案，需买正式服务器）；③ ~~数据库备份策略~~ ✅ 已做（`/root/backup.sh` pg_dump + cron 每天 3 点，保留 7 天）。
 - **✅ 阶段 5 部署收官**：公网 IP 直连访问正常，部署全链路（服务器环境 + 应用 + PM2 + Nginx + 备份）闭环。
 
+### P34 · 修复：线上登录不过（secure cookie）+ 迁移文章数据
+- **现象（用户反馈）**：线上博客 ① 一篇文章都没有；② 邮箱验证码登录不过；③ 问后台账号密码（`admin` / `zg4uN3NsS2YC`）。
+- **根因 1（登录不过，关键教训）**：`startSession` 里 `secure: process.env.NODE_ENV === "production"`。生产 HTTP（IP 直连、未上 HTTPS）下，`secure` cookie **浏览器不发送** → 登录成功签发 Cookie 后立刻被判「未登录」踢回登录页。密码登录、邮箱验证码登录**同时中招**。本地开发无感（`NODE_ENV=development`），一上线才暴露。
+- **修复**：`secure` 改用 `process.env.SESSION_COOKIE_SECURE === "true"` 控制（当前 HTTP 留空=false，上 HTTPS 后再开）。**教训：判断「是否 HTTPS」不能只看 NODE_ENV，要看实际协议。**
+- **根因 2（没文章）**：部署时只迁移了 admin 用户，漏迁移文章数据。修复：启动本地 Docker → `pg_dump` 导出 `Post` 表 → 导入生产（4 篇已发布文章）。
+- **验证**：重新 build + 部署，公网首页/登录页 200，4 篇文章正常显示。登录闭环待用户浏览器实测。
+
 ## 三、待你确认/待办
 - [x] 第一阶段成果已 `git commit` 到本地 `main`（`a5bd1a3`，32 文件）。未 push（需你确认远端与分支策略）。`lib/generated/prisma` 已 gitignore 不进库；`node_modules` 内 junction/package.json 临时改动不进库。
 - [x] 阶段 1 之后（P15–P21）已合并为基线提交 `e440b2b`。未 push。

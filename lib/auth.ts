@@ -69,7 +69,10 @@ export async function startSession(): Promise<void> {
   const store = await cookies();
   store.set(SESSION_COOKIE, createSessionToken(), {
     httpOnly: true, // JS 读不到，XSS 偷不走
-    secure: process.env.NODE_ENV === "production", // 生产只走 HTTPS
+    // secure：只走 HTTPS 时才开。不能用 NODE_ENV==="production" 判断——
+    // 生产也可能走 HTTP（如 IP 直连、未上 HTTPS），secure cookie 在 HTTP 下
+    // 浏览器不发送，会导致登录后立刻被踢回登录页（P34 教训）。
+    secure: process.env.SESSION_COOKIE_SECURE === "true",
     sameSite: "lax", // 挡 CSRF
     path: "/",
     maxAge: SESSION_MAX_AGE,

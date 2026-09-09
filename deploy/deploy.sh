@@ -22,4 +22,18 @@ cd "$APP_DIR"
 pm2 restart blog 2>/dev/null || pm2 start server.js --name blog
 pm2 save
 
+echo "=== 6. 飞书通知 ==="
+# 从 .env 读 FEISHU_WEBHOOK，部署成功后推送到群机器人
+set -a; [ -f "$APP_DIR/.env" ] && . "$APP_DIR/.env"; set +a
+if [ -n "${FEISHU_WEBHOOK:-}" ]; then
+  VER=$(git_hash_placeholder="${PIPELINE_RUN_NUMBER:-手动}"; echo "$git_hash_placeholder")
+  curl -s -X POST "$FEISHU_WEBHOOK" \
+    -H 'Content-Type: application/json' \
+    -d "{\"msg_type\":\"text\",\"content\":{\"text\":\"博客部署完成 ✅\\n来源：${PIPELINE_TITLE:-手动部署}\\n运行：#${VER}\\n主机：$(hostname) $(curl -s --max-time 3 ifconfig.me 2>/dev/null || echo 8.136.107.136)\"}}" \
+    > /dev/null
+  echo "飞书通知已发送"
+else
+  echo "未配置 FEISHU_WEBHOOK，跳过通知"
+fi
+
 echo "部署完成 ✅"

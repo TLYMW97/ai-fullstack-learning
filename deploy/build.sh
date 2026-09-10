@@ -23,6 +23,7 @@ cp -r node_modules/pg .next/standalone/node_modules/
 
 echo "=== 5. 复制 static / public 到 standalone ==="
 cp -r .next/static .next/standalone/.next/static
-cp -r public .next/standalone/public
+# public 可能不存在（空目录不会被 git 跟踪，克隆下来就没了），存在才复制
+[ -d public ] && cp -r public .next/standalone/public || true
 
 echo "构建完成，待归档目录：.next/standalone"

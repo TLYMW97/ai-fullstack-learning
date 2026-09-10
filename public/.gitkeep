@@ -1,0 +1,4 @@
+# 这个文件的作用：让 git 保留 public/ 目录。
+# git 不跟踪空目录，没有它的话克隆下来的仓库里就没有 public/，
+# 构建脚本里 `cp -r public ...` 会报 "cannot stat 'public'"（P37 教训）。
+# 以后往 public/ 放静态资源（图片、robots 等）时删掉本文件即可。

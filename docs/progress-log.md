@@ -431,6 +431,12 @@
 - **同类排查**：`lib/cos.ts` / `lib/geetest.ts` / `lib/session.ts` 的 env 校验都在函数体内（懒执行），
   **只有 `db.ts` 一处是顶层抛错**，已确认无其他同类隐患。
 
+### P37 · 修复：CI 构建最后一步 `cp: cannot stat 'public'`
+- **现象**：云效构建全流程通过（路由表全对），末尾 `cp -r public .next/standalone/public` 报 `No such file or directory`。
+- **根因**：`public/` 是**空目录**，而 **git 不跟踪空目录** → 云效克隆下来的工作区里根本没有它（本地有，所以本地构建正常）。
+- **修复**：① 新增 `public/.gitkeep` 让仓库保留该目录；② `deploy/build.sh` 改为 `[ -d public ] && cp -r public .next/standalone/public || true`（有无该目录都安全，两种情况已实测）。
+- **顺带确认**：代码里没有任何地方引用 `public/` 下的静态资源（图片都走腾讯云 COS），所以线上不会缺文件。
+
 ## 三、待你确认/待办
 - [x] 第一阶段成果已 `git commit` 到本地 `main`（`a5bd1a3`，32 文件）。未 push（需你确认远端与分支策略）。`lib/generated/prisma` 已 gitignore 不进库；`node_modules` 内 junction/package.json 临时改动不进库。
 - [x] 阶段 1 之后（P15–P21）已合并为基线提交 `e440b2b`。未 push。

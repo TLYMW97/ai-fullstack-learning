@@ -203,3 +203,61 @@ set -a; . "$APP_DIR/.env"; set +a
 | 构建 · 执行命令 | `deploy/build.sh` | 装依赖、prisma generate、next build、补全 standalone 产物 |
 | 部署 · 部署脚本 | `deploy/deploy.sh` | 备份 .env → 解压制品 → 恢复 .env → PM2 重启 |
 | 通知 | 云效「飞书群通知」任务插件 | 原生插件，无需仓库文件（旧 `deploy/notify.sh` 已删除） |
+
+---
+
+## 10. 排错：拉取代码超时（`Failed to connect to github.com port 443: Connection timed out`）
+
+### 现象
+
+流水线在**第一个节点（CloneRepoList）**就失败：
+
+```
+fatal: unable to access 'https://github.com/TLYMW97/ai-fullstack-learning/':
+Failed to connect to github.com port 443: Connection timed out
+```
+
+### 定位方法
+
+| 检查 | 命令 / 位置 | 本次结果 |
+|---|---|---|
+| 构建机在哪台机器上跑 | 看 clone 日志里的工作目录 | `/root/workspace/__flow_work/...` → **云效托管构建集群**，不是自有 runner |
+| 自有 runner 是否接到任务 | 服务器 `journalctl -u runner-v0.3.3-...` | 全程 `no new job` → 任务**没有**派给自有 runner |
+| 服务器能否连 GitHub | 服务器上 `curl -sS -o /dev/null -w '%{http_code}' https://github.com` | **200（0.79s）**，`git ls-remote` 正常 |
+
+**结论：问题出在云效托管构建机的出网，不在仓库凭证，也不在你的服务器。**
+
+### 解决方案：通用Git 改用 SSH 协议（走 `ssh.github.com`）
+
+社区同类案例的标准解法——HTTPS 的 443 被封，改用 SSH over 443：
+
+1. **生成专用部署密钥**（ed25519，无口令）：
+   ```bash
+   ssh-keygen -t ed25519 -C "yunxiao-ci-deploy" -f ~/.ssh/yunxiao_ed25519 -N ""
+   ```
+   本项目的密钥已生成在 `.workbuddy/deploy-key/`（该目录已 gitignore，不会入库）。
+
+2. **GitHub 仓库加只读部署公钥**：
+   仓库 → Settings → **Deploy keys** → Add deploy key → 粘贴 `.pub` 内容 →
+   **不勾选 Allow write access**（只读拉取足够，泄露风险最小）。
+
+3. **云效新建「通用Git」服务连接（SSH 私钥方式）**：
+   全局设置 → 服务连接 → 新建服务连接 → 通用Git → 授权方式选 **SSH 私钥** →
+   粘贴私钥全文 → 使用范围「所有人可见」。
+
+4. **流水线源改用 SSH 地址**：
+
+   | 配置项 | 值 |
+   |---|---|
+   | 服务连接 | 上一步新建的 SSH 服务连接 |
+   | 仓库地址 | `git@ssh.github.com:TLYMW97/ai-fullstack-learning.git` ← **注意 `ssh.` 前缀和 22→443 的隐含切换** |
+   | 默认分支 | `main` |
+
+   > ⚠️ 必须是 `git@ssh.github.com:...` 这个格式。写成 `git@github.com:...` 会在 22 端口上继续超时。
+
+### 备选方案（方案 A 不通时）
+
+| 方案 | 做法 | 代价 |
+|---|---|---|
+| B. 自有构建集群 | 构建集群选「私有构建集群」，在你的服务器上构建（服务器**已实测**能直连 GitHub） | 服务器仅 2GB 内存，`next build` 约 10~15 分钟且有 OOM 风险，构建期间可能影响线上服务 |
+| C. 迁移代码库 | 把仓库导入云效 Codeup，流水线源改用 Codeup | 最稳定（阿里内网），但源码源不再是 GitHub，需要双推或改工作流 |

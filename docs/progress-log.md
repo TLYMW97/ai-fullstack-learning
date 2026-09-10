@@ -437,6 +437,17 @@
 - **修复**：① 新增 `public/.gitkeep` 让仓库保留该目录；② `deploy/build.sh` 改为 `[ -d public ] && cp -r public .next/standalone/public || true`（有无该目录都安全，两种情况已实测）。
 - **顺带确认**：代码里没有任何地方引用 `public/` 下的静态资源（图片都走腾讯云 COS），所以线上不会缺文件。
 
+### P38 · 修复：`pg` 未声明为依赖（构建脚本靠 npm 提升侥幸能用）
+- **现象**：本机跑 `deploy/build.sh` 在 `cp -r node_modules/pg ...` 处失败；CI 上却能过。
+- **根因**：构建脚本要复制 `node_modules/pg`，但 **`pg` 从未写进 `package.json`**——它只是
+  `@prisma/adapter-pg` 的**传递依赖**。npm 扁平安装会把它提升到顶层（CI 侥幸可用），
+  pnpm 严格布局下顶层根本没有它（本项目本地开发用的就是 pnpm）。
+- **修复**：`package.json` 的 `dependencies` 显式声明 `"pg": "^8.23.0"`，并 `pnpm install` 同步锁文件。
+  已实测：本机 `node_modules/pg` 存在，构建脚本第 4 步通过。
+- **验证**：完整走通「prisma generate → next build → 补 @prisma/pg → 补 static/public」，
+  产物 30MB，`server.js` / `.next/static` / `node_modules/@prisma` / `node_modules/pg` / `public` 全部就位。
+- **教训**：脚本里 `cp -r node_modules/<x>` 的 `<x>` 必须是**显式声明的依赖**，不能依赖包管理器的提升行为。
+
 ## 三、待你确认/待办
 - [x] 第一阶段成果已 `git commit` 到本地 `main`（`a5bd1a3`，32 文件）。未 push（需你确认远端与分支策略）。`lib/generated/prisma` 已 gitignore 不进库；`node_modules` 内 junction/package.json 临时改动不进库。
 - [x] 阶段 1 之后（P15–P21）已合并为基线提交 `e440b2b`。未 push。

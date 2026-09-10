@@ -10,8 +10,9 @@ import { Button } from "@/components/ui/Button";
 import { site } from "@/lib/site";
 import Link from "next/link";
 
-// ISR：列表页静态化，每 60s 再生一次（生产构建时预渲染；dev 下仍每次实时查询）。
-export const revalidate = 60;
+// 动态渲染：CI 构建机没有数据库，构建期预渲染会直接报 DATABASE_URL 未设置。
+// 代价是没有静态缓存，但博客流量小、库在本机，实时查库反而总是最新数据。
+export const dynamic = "force-dynamic";
 
 // 首页（服务端组件）：Hero + 搜索框 + 主列文章网格 + 侧栏（关于/标签）+ 分页。
 // searchParams 驱动筛选：?tag= 按标签筛、?q= 搜标题、?page= 翻页。

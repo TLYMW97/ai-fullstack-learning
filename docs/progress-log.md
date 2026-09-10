@@ -415,6 +415,22 @@
   - 删除 `deploy/notify.sh`（改用云效原生通知插件；兜底 curl 片段保留在配置文档第 6 节）。
 - **待验证**：按新文档重建流水线并首跑，重点验证 P33 的 Turbopack+Prisma 跨机器哈希问题是否在云构建机复现（预案已写入文档第 8 节）。
 
+### P36 · 修复：CI 构建失败（构建期强依赖数据库）
+- **现象**：云效构建阶段的「执行命令」在 `Collecting page data` 阶段报错——
+  `Failed to collect page data for /sitemap.xml`、`Failed to collect configuration for /posts/[postId]`、`/login`，
+  原因均为 `Error: DATABASE_URL 未设置：请检查项目根目录的 .env`（本地能过是因为本地有 Docker 库）。
+- **根因（两层）**：
+  1. `lib/db.ts` 在**模块顶层**校验环境变量并 `throw`——任何 import 到它的路由，在构建期（云效构建机没有 .env）都会被拖死。**这是主因，`force-dynamic` 挡不住 import**。
+  2. 首页 / sitemap / feed / 详情页原本是预渲染或 ISR，构建期本来就要查库。
+- **修复**：
+  - `lib/db.ts` 改为**懒加载**：用 Proxy 转发，第一次访问 `prisma.xxx` 时才创建客户端并校验 env；调用方（`prisma.post.findMany()` 等）写法完全不变。
+  - `app/sitemap.ts`、`app/feed.xml/route.ts`、`app/(public)/page.tsx`、`app/(public)/posts/[postId]/page.tsx` 统一改 `export const dynamic = "force-dynamic"`，去掉 `revalidate` 与 `generateStaticParams`。
+- **取舍**：放弃静态缓存与 ISR，改为每次请求实时渲染。博客流量小、库在本机，开销可忽略；换来的是**内容永远最新**（不再是构建时刻的快照）+ **构建与数据库彻底解耦**（CI 不用配 `DATABASE_URL`）。
+- **验证**：本地把 `.env` 移开（等价 CI 无库环境）跑 `npx next build` → **EXIT=0**；
+  路由表显示 DB 相关路由全部为 `ƒ`（动态），静态仅剩 `/_not-found`、`/admin/new`、`/robots.txt`；`tsc --noEmit` 0 错。
+- **同类排查**：`lib/cos.ts` / `lib/geetest.ts` / `lib/session.ts` 的 env 校验都在函数体内（懒执行），
+  **只有 `db.ts` 一处是顶层抛错**，已确认无其他同类隐患。
+
 ## 三、待你确认/待办
 - [x] 第一阶段成果已 `git commit` 到本地 `main`（`a5bd1a3`，32 文件）。未 push（需你确认远端与分支策略）。`lib/generated/prisma` 已 gitignore 不进库；`node_modules` 内 junction/package.json 临时改动不进库。
 - [x] 阶段 1 之后（P15–P21）已合并为基线提交 `e440b2b`。未 push。

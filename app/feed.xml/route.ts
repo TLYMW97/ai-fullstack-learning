@@ -3,6 +3,9 @@ import { getPublishedPosts } from "@/lib/posts";
 
 // RSS 订阅源：/feed.xml。用 Route Handler（不是 Server Action），直接返回 XML 字符串。
 // 为什么手写 XML 而不是引库：RSS 2.0 就这几个字段，一个模板字符串够了，零依赖。
+//
+// 必须动态渲染：CI 构建机没有数据库，构建期执行本 handler 会报 DATABASE_URL 未设置。
+export const dynamic = "force-dynamic";
 export async function GET() {
   const posts = await getPublishedPosts();
 

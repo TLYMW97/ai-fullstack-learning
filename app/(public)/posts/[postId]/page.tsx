@@ -6,10 +6,11 @@ import remarkGfm from "remark-gfm";
 import { Container } from "@/components/Container";
 import { ReadingProgress } from "@/components/ReadingProgress";
 import { formatDate, readingTime } from "@/lib/format";
-import { getPostById, getPostIds, getPostsOrdered } from "@/lib/posts";
+import { getPostById, getPostsOrdered } from "@/lib/posts";
 
-// ISR：详情页静态化，每 60s 再生；generateStaticParams 预渲染已有文章（详见下方）。
-export const revalidate = 60;
+// 动态渲染：CI 构建机没有数据库，构建期预渲染会直接报 DATABASE_URL 未设置。
+// 因此不再用 ISR + generateStaticParams，改由服务端在请求时实时渲染（库在本机，开销可忽略）。
+export const dynamic = "force-dynamic";
 
 // 文章详情页：路由 /posts/[postId]
 //
@@ -17,13 +18,6 @@ export const revalidate = 60;
 // 重点 2：generateMetadata 生成 <title>/<meta description>，对 SEO 与分享卡片很重要。
 // 重点 3：正文是 Markdown，用 react-markdown 渲染，外面包 .prose（来自
 //         @tailwindcss/typography）自动获得排版；代码块样式在 globals.css 里统一。
-
-// 预渲染已有文章：构建时把数据库里现有 id 都生成静态页；
-// dynamicParams 默认 true，构建后才新建的文章会在首次访问时按需渲染。
-export async function generateStaticParams() {
-  const posts = await getPostIds();
-  return posts.map((p) => ({ postId: p.id.toString() }));
-}
 
 type PageProps = { params: Promise<{ postId: string }> };
 

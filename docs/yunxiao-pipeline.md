@@ -79,6 +79,9 @@ bash deploy/build.sh
 > 构建命令属于用户自定义内容，云效允许自由填写——但**只做「构建」这一件事**：
 > 装依赖 → prisma generate → next build → 补全 standalone。
 > 产物打包交给下一步的「构建物上传」，脚本里不再 `tar`（旧版 `deploy/build.sh` 里的打包逻辑已删除）。
+>
+> 📌 **构建期不需要数据库**：查库的路由（首页 / 详情 / sitemap / feed）都已改为 `force-dynamic`
+> 请求时渲染，`lib/db.ts` 也是懒加载。所以云效构建机上**不用**配 `DATABASE_URL`（P36）。
 
 **④ 构建物上传**（关键步骤，即你要找的那个）
 

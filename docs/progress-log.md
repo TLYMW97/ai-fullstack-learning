@@ -448,6 +448,24 @@
   产物 30MB，`server.js` / `.next/static` / `node_modules/@prisma` / `node_modules/pg` / `public` 全部就位。
 - **教训**：脚本里 `cp -r node_modules/<x>` 的 `<x>` 必须是**显式声明的依赖**，不能依赖包管理器的提升行为。
 
+### P39 · 事故与修复：部署阶段把线上清空了（制品未下载 + 脚本顺序危险）
+- **现象**：云效「主机部署」失败，日志第 3 步 `tar: /root/package.tgz: Cannot open: No such file or directory`。
+- **连带后果**：脚本是「**先清空 `/root/blog` → 再解压**」的顺序，所以清空已发生而解压失败 →
+  **线上目录被清空，站点 502**（靠旧 PM2 进程内存勉强撑了一会儿）。
+- **根因（两条，都要修）**：
+  1. **制品没被下载**：部署日志里 `package_download_path=/root/package.tgz` 已配置，但文件不存在 →
+     「主机部署」步骤的**「制品」下拉没有选中**构建阶段归档的产物，云效就不会下发制品包。
+  2. **脚本顺序危险**：把"制品缺失"这种小事故，放大成"线上被清空"的宕机事故。
+- **抢修过程**：先用服务器残留的 `/root/deploy.tar.gz` 恢复 → 起不来，报
+  `Cannot find module '@swc/helpers/_/_interop_require_default'`。
+  查明该 tar 是**本地 pnpm 构建**的产物：standalone 的 node_modules 是**符号链接骨架**（顶层只剩 4 项，
+  `@swc` 整块缺失），打包即损坏 → 属于 P33 的同类问题。最终在服务器 `npm install --omit=dev` 补齐依赖树后恢复。
+- **修复**：
+  - `deploy/deploy.sh` 重写为**先校验、后切换**：① 制品包不存在/为空 → 直接失败，**不动线上**；
+    ② 解压到 `/root/blog_new` 并校验 `server.js`、`.next` 存在；③ 校验通过才 `mv` 切换并重启。
+  - 明确「本地 pnpm 构建的产物不可直接部署」：**产物必须由 CI（npm 扁平安装）构建**。
+- **教训**：部署脚本永远不要「先破坏、再验证」——解压到旁路目录校验通过后再原子切换。
+
 ## 三、待你确认/待办
 - [x] 第一阶段成果已 `git commit` 到本地 `main`（`a5bd1a3`，32 文件）。未 push（需你确认远端与分支策略）。`lib/generated/prisma` 已 gitignore 不进库；`node_modules` 内 junction/package.json 临时改动不进库。
 - [x] 阶段 1 之后（P15–P21）已合并为基线提交 `e440b2b`。未 push。

@@ -118,16 +118,29 @@ bash deploy/build.sh
 ```bash
 set -e
 APP_DIR=/root/blog
+NEW_DIR=/root/blog_new
 PKG=/root/package.tgz
 
-echo "=== 1. 备份 .env ==="
+echo "=== 0. 检查制品包 ==="
+if [ ! -s "$PKG" ]; then
+  echo "❌ 制品包不存在或为空：$PKG"
+  echo "   → 请检查「主机部署」步骤的「制品」是否已选中构建阶段归档的那个制品"
+  exit 1
+fi
+
+echo "=== 1. 解压到临时目录并校验（失败不影响线上）==="
+rm -rf "$NEW_DIR"
+mkdir -p "$NEW_DIR"
+tar -xzf "$PKG" -C "$NEW_DIR"
+[ -f "$NEW_DIR/server.js" ] || { echo "❌ 制品内容异常：缺少 server.js"; exit 1; }
+[ -d "$NEW_DIR/.next" ]     || { echo "❌ 制品内容异常：缺少 .next 目录"; exit 1; }
+
+echo "=== 2. 备份 .env ==="
 [ -f "$APP_DIR/.env" ] && cp "$APP_DIR/.env" /root/blog.env.bak
 
-echo "=== 2. 清空部署目录 ==="
-rm -rf "$APP_DIR"/* "$APP_DIR"/.[!.]* 2>/dev/null || true
-
-echo "=== 3. 解压云效制品 ==="
-tar -xzf "$PKG" -C "$APP_DIR"
+echo "=== 3. 切换到新版本 ==="
+rm -rf "$APP_DIR"
+mv "$NEW_DIR" "$APP_DIR"
 
 echo "=== 4. 恢复 .env ==="
 [ -f /root/blog.env.bak ] && cp /root/blog.env.bak "$APP_DIR/.env"
@@ -140,8 +153,15 @@ pm2 save
 echo "部署完成 ✅"
 ```
 
+> ⚠️ **顺序是关键：先校验、后切换。** 绝不能写成「先清空线上目录 → 再解压」——
+> 制品一旦缺失（比如「制品」没选中），就会变成"线上被清空 + 部署失败"的宕机事故（P39 实录）。
+>
 > 与仓库 `deploy/deploy.sh` 内容一致。`.env` 不在制品里（已被 gitignore），
-> 所以用「备份 → 清空 → 解压 → 恢复」的方式保住线上配置。
+> 所以用「备份 → 切换 → 恢复」的方式保住线上配置。
+
+> 🚫 **不要部署本地构建的产物。** 本地用 pnpm，standalone 的 `node_modules` 是一堆
+> 指向 `.pnpm` 的**符号链接**（打出来就是断链骨架，`@swc/helpers` 之类的包直接缺失）。
+> 产物必须由 CI（npm 扁平安装）构建（P39 教训）。
 
 ---
 
@@ -192,10 +212,13 @@ set -a; . "$APP_DIR/.env"; set +a
 
 | 风险 | 现象 | 预案 |
 |---|---|---|
+| **「制品」没选中 → 产物没下发** | 部署脚本报 `/root/package.tgz: Cannot open: No such file or directory`（P39 实录，且当时把线上清空了） | 在「主机部署」步骤的**「制品」下拉里选中**构建阶段归档的制品；部署脚本已加前置校验，缺产物直接失败、不动线上 |
+| 本地构建的产物不可用 | 部署后启动报 `Cannot find module '@swc/helpers/...'` | 只用 CI 构建的产物（本地 pnpm 的 standalone 是符号链接骨架） |
+| 服务器上 npm 官方源不可达 | `npm install` 长时间卡住不动 | 服务器侧一律用 `--registry=https://registry.npmmirror.com`（实测 1m 装完 346 个包，官方源 10s 超时） |
 | Turbopack + Prisma 7 跨机器内容哈希（P33 教训） | 部署后线上 500，日志 `Cannot find module @prisma/client-xxxx` | 在部署脚本解压后追加：`npm install --prefix /root/blog @prisma/client@7.10.0 @prisma/adapter-pg@7.10.0 pg --registry=https://registry.npmmirror.com` |
 | 制品为空导致部署空跑 | 部署耗时仅几秒，服务器文件未变 | 检查「构建物上传」的打包路径与制品名，确认部署阶段「制品」下拉已选中 |
 | 构建机 Node 版本过低 | `next build` 报 Node 版本不满足 | 在「安装 Node 环境」步骤显式选 22.x，不要依赖默认版本 |
-| 部署后 `.env` 丢失导致 500 | 应用启动即报数据库连不上 | 部署脚本第 1/4 步的备份恢复逻辑必须保留 |
+| 部署后 `.env` 丢失导致 500 | 应用启动即报数据库连不上 | 部署脚本第 2/4 步的备份恢复逻辑必须保留 |
 
 ---
 

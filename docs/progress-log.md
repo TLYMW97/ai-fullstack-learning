@@ -466,6 +466,15 @@
   - 明确「本地 pnpm 构建的产物不可直接部署」：**产物必须由 CI（npm 扁平安装）构建**。
 - **教训**：部署脚本永远不要「先破坏、再验证」——解压到旁路目录校验通过后再原子切换。
 
+### P40 · 页脚版本号（构建时注入 git 短哈希）
+- **需求**：线上更新后要能一眼确认"是不是刚部署的新版本"。
+- **实现**：
+  - `components/SiteFooter.tsx` 增加一行版本号：`NEXT_PUBLIC_APP_VERSION` + `NEXT_PUBLIC_BUILD_TIME`（本地无注入时显示 `dev`）。
+  - `deploy/build.sh` 在 `next build` **之前**注入：优先用云效的 `CI_COMMIT_ID`，本地回退 `git rev-parse --short HEAD`，构建时间用 `TZ=Asia/Shanghai`。
+  - `NEXT_PUBLIC_*` 由 Next 在**构建时内联**进产物，运行时不依赖环境变量（换版本必须重新构建，这是预期行为）。
+- **验证**：本地以 `NEXT_PUBLIC_APP_VERSION=test1234` 构建 → 产物内命中 13 处，构建时间同样写入。
+- **约定**：流水线构建步骤的「执行命令」固定写 **`bash deploy/build.sh`**（脚本内容只改仓库，不再把脚本贴进流水线，避免两边不同步）。
+
 ## 三、待你确认/待办
 - [x] 第一阶段成果已 `git commit` 到本地 `main`（`a5bd1a3`，32 文件）。未 push（需你确认远端与分支策略）。`lib/generated/prisma` 已 gitignore 不进库；`node_modules` 内 junction/package.json 临时改动不进库。
 - [x] 阶段 1 之后（P15–P21）已合并为基线提交 `e440b2b`。未 push。

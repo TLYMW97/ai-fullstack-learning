@@ -13,6 +13,15 @@ npm install --registry=https://registry.npmmirror.com --no-audit --no-fund
 echo "=== 2. 生成 Prisma Client ==="
 npx prisma generate
 
+echo "=== 2.5 注入版本号（页脚展示，用来确认线上是不是新版本）==="
+# NEXT_PUBLIC_* 会被 Next 在构建时**内联进产物**，运行时不依赖环境变量。
+# 云效会注入 CI_COMMIT_ID；本地构建则用 git 短哈希兜底。
+BUILD_VER="${CI_COMMIT_ID:-}"
+[ -z "$BUILD_VER" ] && BUILD_VER="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+export NEXT_PUBLIC_APP_VERSION="$BUILD_VER"
+export NEXT_PUBLIC_BUILD_TIME="$(TZ=Asia/Shanghai date '+%m-%d %H:%M' 2>/dev/null || echo '')"
+echo "版本号: $NEXT_PUBLIC_APP_VERSION · $NEXT_PUBLIC_BUILD_TIME"
+
 echo "=== 3. 构建（next.config.ts 已配置 output: standalone）==="
 npm run build
 

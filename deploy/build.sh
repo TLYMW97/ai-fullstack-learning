@@ -3,8 +3,11 @@
 # 打包交给流水线的「构建物上传」步骤（打包路径 .next/standalone），故此处不生成 tar。
 set -euo pipefail
 
-# 固定以仓库根目录为工作目录（云效「执行命令」的工作目录可能不同）
-cd "$(dirname "$0")/.."
+# 切到仓库根目录。
+# ⚠️ 不能只用 `$(dirname "$0")/..`：脚本被"贴进流水线"时，云效会把它写到
+#    /root/workspace/__flow_work/__flow_temp/<id>/ 再执行，$0 指向那个临时文件，
+#    dirname 出来的就不是仓库（P41 教训）。优先用云效注入的 PROJECT_DIR。
+cd "${PROJECT_DIR:-$(dirname "$0")/..}"
 
 echo "=== 1. 装依赖 ==="
 # Node 环境由云效「安装 Node 环境」步骤提供，这里不装 Node

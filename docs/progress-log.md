@@ -475,6 +475,16 @@
 - **验证**：本地以 `NEXT_PUBLIC_APP_VERSION=test1234` 构建 → 产物内命中 13 处，构建时间同样写入。
 - **约定**：流水线构建步骤的「执行命令」固定写 **`bash deploy/build.sh`**（脚本内容只改仓库，不再把脚本贴进流水线，避免两边不同步）。
 
+### P41 · 修复：`build.sh` 被贴进流水线后工作目录切错
+- **现象**：把 `deploy/build.sh` 全文贴进云效「执行命令」后报
+  `npm error ENOENT ... open '/root/workspace/__flow_work/__flow_temp/<id>/package.json'`。
+- **根因**：`cd "$(dirname "$0")/.."` 依赖脚本自身路径。云效会把脚本内容写到
+  `/root/workspace/__flow_work/__flow_temp/<buildid>/` 再执行，`$0` 指向那个**临时文件** →
+  `dirname/..` 得到 `__flow_temp` 而不是仓库。（之前能跑是因为用户贴的版本用的是 `cd "$PROJECT_DIR"`。）
+- **修复**：改为 `cd "${PROJECT_DIR:-$(dirname "$0")/..}"`——优先用云效注入的 `PROJECT_DIR`，
+  本地/独立执行时回退到脚本所在目录。三种场景（贴进流水线、`bash deploy/build.sh`、本地直跑）均实测落到仓库根。
+- **约定**：流水线的「执行命令」推荐只写 `bash deploy/build.sh`，脚本改动只改仓库。
+
 ## 三、待你确认/待办
 - [x] 第一阶段成果已 `git commit` 到本地 `main`（`a5bd1a3`，32 文件）。未 push（需你确认远端与分支策略）。`lib/generated/prisma` 已 gitignore 不进库；`node_modules` 内 junction/package.json 临时改动不进库。
 - [x] 阶段 1 之后（P15–P21）已合并为基线提交 `e440b2b`。未 push。

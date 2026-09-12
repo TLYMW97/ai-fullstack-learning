@@ -18,10 +18,11 @@ npx prisma generate
 
 echo "=== 2.5 注入版本号（页脚展示，用来确认线上是不是新版本）==="
 # NEXT_PUBLIC_* 会被 Next 在构建时**内联进产物**，运行时不依赖环境变量。
-# 云效会注入 CI_COMMIT_ID；本地构建则用 git 短哈希兜底。
-BUILD_VER="${CI_COMMIT_ID:-}"
-[ -z "$BUILD_VER" ] && BUILD_VER="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
-export NEXT_PUBLIC_APP_VERSION="$BUILD_VER"
+# 语义版本取自 package.json；提交号优先用云效注入的 CI_COMMIT_ID，本地回退 git 短哈希。
+PKG_VER="$(node -p "require('./package.json').version" 2>/dev/null || echo unknown)"
+COMMIT="${CI_COMMIT_ID:-}"
+[ -z "$COMMIT" ] && COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+export NEXT_PUBLIC_APP_VERSION="v$PKG_VER · $COMMIT"
 export NEXT_PUBLIC_BUILD_TIME="$(TZ=Asia/Shanghai date '+%m-%d %H:%M' 2>/dev/null || echo '')"
 echo "版本号: $NEXT_PUBLIC_APP_VERSION · $NEXT_PUBLIC_BUILD_TIME"
 
